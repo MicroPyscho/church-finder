@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB:       churchfinder_staging
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    image: ${IMAGE_TAG:?IMAGE_TAG must be set}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENV:          staging
+      APP_VERSION:  ${APP_VERSION:-unknown}
+      DATABASE_URL: "postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/churchfinder_staging"
+      CORS_ORIGINS: '["${STAGING_FRONTEND_URL:-https://staging.church-finder.example.com}"]'
+      NOTIFY_METHOD: ${NOTIFY_METHOD:-email}
+      SMTP_USER:     ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      NOTIFY_EMAIL_TO: ${NOTIFY_EMAIL_TO:-}
+      WEBHOOK_URL:   ${WEBHOOK_URL:-}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 30s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/staging.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+
+volumes:
+  postgres_staging_data:
+  

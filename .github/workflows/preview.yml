@@ -1,0 +1,73 @@
+name: Preview Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main, staging]
+
+env:
+  REGISTRY:   ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/church-finder-backend
+
+jobs:
+
+  deploy-preview:
+    name: "Deploy preview — PR #${{ github.event.number }}"
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend for preview
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: "https://pr-${{ github.event.number }}.preview.church-finder.example.com"
+          VITE_APP_ENV: "staging"
+
+      - name: Deploy frontend preview to Netlify
+        id: netlify
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: "./frontend/dist"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "PR #${{ github.event.number }} preview"
+          alias: pr-${{ github.event.number }}
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN:  ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID:     ${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Post preview URL as PR comment
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ## Preview Environment Ready
+
+            | Layer      | URL |
+            |------------|-----|
+            | **Frontend** | ${{ steps.netlify.outputs.deploy-url }} |
+            | **API**      | https://pr-${{ github.event.number }}.preview.church-finder.example.com |
+
+            **Commit:** `${{ github.sha }}`
+          comment_tag: preview-url
+
+
+  teardown-preview:
+    name: "Tear down preview — PR #${{ github.event.number }}"
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update PR comment — preview closed
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ## ~~Preview Environment~~ — Closed
+            Preview environment has been torn down.
+          comment_tag: preview-url
+          

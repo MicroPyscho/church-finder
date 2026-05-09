@@ -1,0 +1,1 @@
+# New to projects like these? take a look at the [File Creation Guide](SETUP.md) to understand how the structure works.
