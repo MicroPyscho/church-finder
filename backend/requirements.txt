@@ -9,8 +9,8 @@ asyncpg==0.29.0
 alembic==1.13.1
 
 # Crawler
+scrapling==0.2.9
 httpx==0.27.0
-beautifulsoup4==4.12.3
 lxml==5.2.2
 
 #Testing

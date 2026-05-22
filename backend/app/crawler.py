@@ -4,13 +4,15 @@ import logging
 from datetime import datetime
 
 import httpx
-from bs4 import BeautifulSoup
+from scrapling import Fetcher
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models import Listing, CrawlRun
 
 logger = logging.getLogger(__name__)
+
+fetcher = Fetcher(auto_match=False)
 
 HEADERS = {
     "User-Agent": (
@@ -19,7 +21,9 @@ HEADERS = {
         "Chrome/122.0.0.0 Safari/537.36"
     ),
     "Accept-Language": "en-GB,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
+
 
 RIGHTMOVE_REGIONS = [
     ("Kent",            "REGION%5E61"),
@@ -53,15 +57,16 @@ def has_keyword(text: str) -> bool:
     return any(kw in t for kw in settings.KEYWORDS)
 
 
-async def fetch_html(client: httpx.AsyncClient, url: str) -> BeautifulSoup | None:
+async def fetch_html(client: httpx.AsyncClient, url: str):
     try:
-        r = await client.get(url, headers=HEADERS, timeout=15, follow_redirects=True)
+        r = await client.get(url, headers=HEADERS, timeout=20, follow_redirects=True)
         r.raise_for_status()
-        return BeautifulSoup(r.text, "lxml")
+        # Use Scrapling to parse — handles dynamic selectors better
+        page = fetcher.fetch(url, headers=HEADERS)
+        return page
     except Exception as exc:
         logger.warning("Fetch failed %s: %s", url, exc)
         return None
-
 
 async def scrape_rightmove(client: httpx.AsyncClient) -> list[dict]:
     results = []
