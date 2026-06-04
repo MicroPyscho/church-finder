@@ -1,71 +1,52 @@
+import { BrowserRouter, Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
-import { useState } from "react";
-import {
-  Church, LayoutDashboard, Rocket, Activity, Menu, X,
-} from "lucide-react";
-import ListingsPage    from "./components/ListingsPage";
-import DeploymentsPage from "./components/DeploymentsPage";
-import CrawlRunsPage   from "./components/CrawlRunsPage";
-import HealthBadge     from "./components/HealthBadge";
-import EnvBanner       from "./components/EnvBanner";
+import { Heart, Bell, User } from "lucide-react";
+import SearchPage     from "./pages/SearchPage";
+import ResultsPage    from "./pages/ResultsPage";
+import PropertyPage   from "./pages/PropertyPage";
+import FavouritesPage from "./pages/FavouritesPage";
+import AlertsPage     from "./pages/AlertsPage";
+import AuthPage       from "./pages/AuthPage";
+import ConfirmPage    from "./pages/ConfirmPage";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime:  30_000,
-      retry:      2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const qc = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
+
+function Nav() {
+  const nav = useNavigate();
+  return (
+    <nav className="nav">
+      <div className="wrap nav-inner">
+        <button className="nav-logo" onClick={() => nav("/")}>Sanctuary</button>
+        <div className="nav-links">
+          <NavLink to="/"           end       className={({isActive}) => `nav-link${isActive?" active":""}`}>Search</NavLink>
+          <NavLink to="/favourites"           className={({isActive}) => `nav-link${isActive?" active":""}`}>Saved</NavLink>
+          <NavLink to="/alerts"               className={({isActive}) => `nav-link${isActive?" active":""}`}>Alerts</NavLink>
+        </div>
+        <div className="nav-right">
+          <NavLink to="/favourites" className="btn-sm" style={{border:"none"}}><Heart size={15}/></NavLink>
+          <NavLink to="/alerts"     className="btn-sm" style={{border:"none"}}><Bell  size={15}/></NavLink>
+          <NavLink to="/auth"       className="btn-sm"><User size={13}/> Sign in</NavLink>
+        </div>
+      </div>
+    </nav>
+  );
+}
 
 export default function App() {
-  const [navOpen, setNavOpen] = useState(false);
-
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={qc}>
       <BrowserRouter>
-        <div className="app-shell">
-          <EnvBanner />
-
-          <header className="topbar">
-            <div className="topbar-left">
-              <Church size={22} strokeWidth={1.5} />
-              <span className="brand">ChurchFinder</span>
-            </div>
-
-            <nav className={`main-nav ${navOpen ? "open" : ""}`}>
-              <NavLink to="/"            end onClick={() => setNavOpen(false)}>
-                <LayoutDashboard size={15} /> Listings
-              </NavLink>
-              <NavLink to="/deployments"    onClick={() => setNavOpen(false)}>
-                <Rocket size={15} /> Deployments
-              </NavLink>
-              <NavLink to="/crawl-runs"     onClick={() => setNavOpen(false)}>
-                <Activity size={15} /> Crawl Runs
-              </NavLink>
-            </nav>
-
-            <div className="topbar-right">
-              <HealthBadge />
-              <button
-                className="nav-toggle"
-                onClick={() => setNavOpen(o => !o)}
-                aria-label="Toggle nav"
-              >
-                {navOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
-            </div>
-          </header>
-
-          <main className="page-content">
-            <Routes>
-              <Route path="/"            element={<ListingsPage />} />
-              <Route path="/deployments" element={<DeploymentsPage />} />
-              <Route path="/crawl-runs"  element={<CrawlRunsPage />} />
-            </Routes>
-          </main>
+        <Nav />
+        <div className="page">
+          <Routes>
+            <Route path="/"               element={<SearchPage />} />
+            <Route path="/results"        element={<ResultsPage />} />
+            <Route path="/properties/:id" element={<PropertyPage />} />
+            <Route path="/favourites"     element={<FavouritesPage />} />
+            <Route path="/alerts"         element={<AlertsPage />} />
+            <Route path="/auth"           element={<AuthPage />} />
+            <Route path="/confirmed"      element={<ConfirmPage />} />
+          </Routes>
         </div>
       </BrowserRouter>
     </QueryClientProvider>
