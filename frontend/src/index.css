@@ -113,7 +113,7 @@ input, textarea, select { font-family: var(--font-body); }
   font-size: clamp(2.4rem, 6vw, 4rem);
   font-weight: 900; line-height: 1.08;
   color: var(--ink); margin-bottom: 12px;
-  letter-spacing: -.03em; max-width: 680px;
+  letter-spacing: -.01em; max-width: 680px;
 }
 .search-hero__title em {
   font-style: normal; position: relative; display: inline-block;
@@ -538,4 +538,148 @@ input, textarea, select { font-family: var(--font-body); }
   .nav-links { display: none; }
   .card { grid-template-columns: 1fr; }
   .match { border-left: none; border-top: 1px solid var(--rule-soft); flex-direction: row; justify-content: flex-start; padding: 10px 20px; }
+}
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes border-spin {
+  to { --border-angle: 360deg; }
+}
+
+.searchbar:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+  position: relative;
+}
+
+.searchbar:focus-within::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 100px;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--border-angle),
+    #d4170f 0%,
+    #e85d04 14%,
+    #f5a623 28%,
+    #1a7a3c 42%,
+    #1040a0 56%,
+    #3730a3 70%,
+    #7c3aed 84%,
+    #d4170f 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-spin 3s linear infinite;
+  z-index: -1;
+}
+/* ── Dark mode toggle ────────────────────────────────────────────────────── */
+.dark-toggle {
+  width: 36px; height: 20px;
+  border-radius: 100px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.dark-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--mid);
+  transition: transform .2s, background .2s;
+}
+.dark-toggle.on {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.dark-toggle.on::after {
+  transform: translateX(16px);
+  background: var(--white);
+}
+
+/* ── Force dark mode class on html element ──────────────────────────────── */
+html.dark {
+  --black:     #f5f5f5;
+  --off-black: #e8e8e8;
+  --ink:       #e0e0e0;
+  --ink-soft:  #c8c8c8;
+  --mid:       #888888;
+  --rule:      #2a2a2a;
+  --rule-soft: #1e1e1e;
+  --off-white: #111111;
+  --white:     #0a0a0a;
+  --green:     #34d470;
+  --red:       #ff4d47;
+  --blue:      #5b8ef0;
+  --violet:    #a78bfa;
+  --orange:    #fb923c;
+  --yellow:    #fbbf24;
+}
+/* ── Remove system preference override — class always wins ──────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --black:     #0a0a0a;
+    --off-black: #141414;
+    --ink:       #1a1a1a;
+    --ink-soft:  #2e2e2e;
+    --mid:       #6b6b6b;
+    --rule:      #e0e0e0;
+    --rule-soft: #f0f0f0;
+    --off-white: #f7f7f7;
+    --white:     #ffffff;
+    --green:     #1a7a3c;
+    --red:       #d4170f;
+    --blue:      #1040a0;
+    --violet:    #7c3aed;
+    --orange:    #e85d04;
+    --yellow:    #f5a623;
+  }
+}
+
+/* Light mode — explicit, always beats system preference */
+html:not(.dark) {
+  --black:     #0a0a0a;
+  --off-black: #141414;
+  --ink:       #1a1a1a;
+  --ink-soft:  #2e2e2e;
+  --mid:       #6b6b6b;
+  --rule:      #e0e0e0;
+  --rule-soft: #f0f0f0;
+  --off-white: #f7f7f7;
+  --white:     #ffffff;
+  --green:     #1a7a3c;
+  --red:       #d4170f;
+  --blue:      #1040a0;
+  --violet:    #7c3aed;
+  --orange:    #e85d04;
+  --yellow:    #f5a623;
+}
+
+/* Dark mode — explicit class on html element */
+html.dark {
+  --black:     #f5f5f5;
+  --off-black: #e8e8e8;
+  --ink:       #e0e0e0;
+  --ink-soft:  #c8c8c8;
+  --mid:       #888888;
+  --rule:      #2a2a2a;
+  --rule-soft: #1e1e1e;
+  --off-white: #111111;
+  --white:     #0a0a0a;
+  --green:     #34d470;
+  --red:       #ff4d47;
+  --blue:      #5b8ef0;
+  --violet:    #a78bfa;
+  --orange:    #fb923c;
+  --yellow:    #fbbf24;
 }
