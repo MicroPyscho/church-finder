@@ -7,12 +7,9 @@ import { propertyApi, favouritesApi } from "../api/client";
 import { useSearchStore } from "../stores/searchStore";
 import { buildCriteria, computeMatchScore } from "../components/property/PropertyCard";
 import InterestModal from "../components/ui/InterestModal";
+import { cleanDescription } from "../utils/text";
 
-const BASE = (() => {
-  const host = window.location.hostname;
-  if (host !== "localhost" && host !== "127.0.0.1") return `http://${host}:8000`;
-  return import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-})();
+const BASE = "";
 
 const FEATS: [string, string, string][] = [
   ["has_parking","🅿️","Parking"],["has_graveyard","⚰️","Graveyard"],
@@ -252,7 +249,7 @@ export default function PropertyPage() {
           </div>
 
           {prop.description && (
-            <p className="detail-desc">{prop.description}</p>
+            <p className="detail-desc">{cleanDescription(prop.description)}</p>
           )}
 
           {/* AI analysis */}

@@ -1,5 +1,4 @@
 services:
-
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -28,7 +27,7 @@ services:
       ENV: dev
       APP_VERSION: "0.0.0-dev"
       DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/churchfinder"
-      CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
+      CORS_ORIGINS: '["*"]'
       NOTIFY_METHOD: none
       REQUEST_DELAY_SECONDS: "1"
       SECRET_KEY: dev-secret-not-for-prod-change-me
@@ -54,9 +53,6 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      VITE_API_URL: "http://localhost:8000"
-      VITE_APP_ENV: "dev"
     ports:
       - "3000:3000"
     volumes:
@@ -66,4 +62,3 @@ services:
 
 volumes:
   postgres_data:
-  

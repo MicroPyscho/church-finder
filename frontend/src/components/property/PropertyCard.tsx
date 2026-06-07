@@ -5,6 +5,8 @@ import { formatDistanceToNow } from "date-fns";
 import { favouritesApi } from "../../api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import InterestModal from "../ui/InterestModal";
+import { descriptionSnippet } from "../../utils/text";
+import { descriptionSnippet } from "../../utils/text";
 
 interface Props {
   property:    any;
@@ -157,7 +159,7 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
   const location = (p.location || "Location unknown");
   const priceRaw = (p.price_raw || p.price || "POA").replace(/([^\s])£/, "$1 £").trim();
   const isPOA = ["POA","Enquire","TBC","See article","Heritage at Risk","Filing signal","Planning stage"].some(x => priceRaw.includes(x));
-  const snippet = p.description ? p.description.replace(/\s+/g, " ").trim().slice(0, 120) + "…" : "";
+  const snippet = descriptionSnippet(p.description, 120);
   const timeAgo = p.first_seen ? formatDistanceToNow(new Date(p.first_seen), { addSuffix: true }) : "";
 
   const imgs: string[] = Array.isArray(p.images) && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : [];
