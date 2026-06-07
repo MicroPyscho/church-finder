@@ -1,2 +1,29 @@
+scrapling==0.2.9          # scraping engine
 
-scrapling
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+
+# Database
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.36
+alembic==1.14.0
+
+# HTTP client (for static sources — CC, Land Registry, Gov.uk)
+httpx==0.28.1
+
+# Browser scraping (bot-protected sources — Rightmove, Zoopla)
+playwright==1.49.0
+
+# Caching
+redis==5.2.1
+
+# Task queue
+celery==5.4.0
+
+# Utilities
+python-dotenv==1.0.1
+structlog==24.4.0          # structured logging
+tenacity==9.0.0            # retry logic
