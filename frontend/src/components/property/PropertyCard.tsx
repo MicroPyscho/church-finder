@@ -6,7 +6,6 @@ import { favouritesApi } from "../../api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import InterestModal from "../ui/InterestModal";
 import { descriptionSnippet } from "../../utils/text";
-import { descriptionSnippet } from "../../utils/text";
 
 interface Props {
   property:    any;
@@ -74,60 +73,39 @@ const SOURCE_TAG_TYPE: Record<string, string> = {
 
 const TYPE_EMOJI: Record<string, string> = { church:"⛪", hall:"🏛", large_space:"🏢", other:"🏠" };
 
-// Looping slideshow — never shows emoji mid-loop, wraps back to first image
 function ImageSlideshow({ images, emoji, title }: { images: string[]; emoji: string; title: string }) {
   const [idx, setIdx] = useState(0);
   const [failed, setFailed] = useState<Set<number>>(new Set());
-
   const valid = images.filter((_, i) => !failed.has(i));
-
   if (valid.length === 0) return <div className="pcard-img-placeholder">{emoji}</div>;
-
   const cur = idx % valid.length;
-
   const handleError = () => {
     const originalIdx = images.indexOf(valid[cur]);
     setFailed(prev => new Set(prev).add(originalIdx));
-    // Move to next — if last valid image fails, will show emoji next render
   };
-
-  const prev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIdx(i => (i - 1 + valid.length) % valid.length);
-  };
-  const next = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIdx(i => (i + 1) % valid.length);
-  };
-
+  const prev = (e: React.MouseEvent) => { e.stopPropagation(); setIdx(i => (i - 1 + valid.length) % valid.length); };
+  const next = (e: React.MouseEvent) => { e.stopPropagation(); setIdx(i => (i + 1) % valid.length); };
   return (
     <>
-      <img
-        key={valid[cur]}
-        src={valid[cur]}
-        alt={title}
-        onError={handleError}
-        loading="lazy"
-        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
-      />
+      <img key={valid[cur]} src={valid[cur]} alt={title} onError={handleError} loading="lazy"
+        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
       {valid.length > 1 && (
         <>
-          <button onClick={prev} style={{
-            position:"absolute", left:4, top:"50%", transform:"translateY(-50%)",
+          <button onClick={prev} style={{ position:"absolute", left:4, top:"50%", transform:"translateY(-50%)",
             background:"rgba(0,0,0,.5)", color:"#fff", border:"none", borderRadius:"50%",
-            width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          }}><ChevronLeft size={13}/></button>
-          <button onClick={next} style={{
-            position:"absolute", right:4, top:"50%", transform:"translateY(-50%)",
+            width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <ChevronLeft size={13}/>
+          </button>
+          <button onClick={next} style={{ position:"absolute", right:4, top:"50%", transform:"translateY(-50%)",
             background:"rgba(0,0,0,.5)", color:"#fff", border:"none", borderRadius:"50%",
-            width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          }}><ChevronRight size={13}/></button>
+            width:22, height:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <ChevronRight size={13}/>
+          </button>
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:3 }}>
             {valid.map((_: string, i: number) => (
               <span key={i} onClick={e => { e.stopPropagation(); setIdx(i); }} style={{
                 width:5, height:5, borderRadius:"50%", cursor:"pointer", display:"inline-block",
-                background: i === cur ? "#fff" : "rgba(255,255,255,.4)",
-              }}/>
+                background: i === cur ? "#fff" : "rgba(255,255,255,.4)" }}/>
             ))}
           </div>
         </>
@@ -153,7 +131,6 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
   const criteria_ = criteria.length > 0 ? criteria : (p._criteria || []);
   const emoji = TYPE_EMOJI[p.property_type || "other"] || "⛪";
   const tagType = SOURCE_TAG_TYPE[p.source] || "portal";
-
   const rawTitle = (p.title || "").replace(/£[\d,]+(\s*[-–]\s*£[\d,]+)?/g, "").replace(/\s{2,}/g, " ").trim();
   const title = toTitleCase(rawTitle) || p.title;
   const location = (p.location || "Location unknown");
@@ -161,7 +138,6 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
   const isPOA = ["POA","Enquire","TBC","See article","Heritage at Risk","Filing signal","Planning stage"].some(x => priceRaw.includes(x));
   const snippet = descriptionSnippet(p.description, 120);
   const timeAgo = p.first_seen ? formatDistanceToNow(new Date(p.first_seen), { addSuffix: true }) : "";
-
   const imgs: string[] = Array.isArray(p.images) && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : [];
 
   return (
@@ -171,11 +147,9 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
           <ImageSlideshow images={imgs} emoji={emoji} title={title} />
         </div>
 
-        <button
-          className={"pcard-fav" + (faved ? " saved" : "")}
+        <button className={"pcard-fav" + (faved ? " saved" : "")}
           onClick={e => { e.stopPropagation(); favMut.mutate(); }}
-          title={faved ? "Remove" : "Save"}
-        >
+          title={faved ? "Remove" : "Save"}>
           <Heart size={12} fill={faved ? "#d4170f" : "none"} color={faved ? "#d4170f" : "var(--mid)"} />
         </button>
 
@@ -185,11 +159,7 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
               <span className={`tag ${tagType}`}>{p.source}</span>
               {p.listing_type === "auction" && <span className="tag auction" style={{ marginLeft:4 }}>Auction</span>}
             </div>
-
-            <div className="pcard-title" onClick={() => navigate("/properties/" + p.id)}>
-              {title}
-            </div>
-
+            <div className="pcard-title" onClick={() => navigate("/properties/" + p.id)}>{title}</div>
             <div className="pcard-meta">
               <span style={{ display:"flex", alignItems:"center", gap:3 }}>
                 <MapPin size={10}/>{location}
@@ -202,7 +172,6 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
                 <Clock size={9}/>{timeAgo}
               </span>
             </div>
-
             {criteria_.length > 0 && (
               <div className="pcard-criteria">
                 {criteria_.map((c: any, i: number) => (
@@ -213,14 +182,11 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
                 ))}
               </div>
             )}
-
             {snippet && <p className="pcard-desc">{snippet}</p>}
           </div>
 
           <div className="pcard-actions">
-            <button className="pcard-btn primary" onClick={() => navigate("/properties/" + p.id)}>
-              View more
-            </button>
+            <button className="pcard-btn primary" onClick={() => navigate("/properties/" + p.id)}>View more</button>
             {sent
               ? <span style={{ fontSize:"0.7rem", color:"var(--green)" }}>✓ Sent</span>
               : <button className="pcard-btn" onClick={() => setModal(true)}><Mail size={10}/> Contact</button>
@@ -236,7 +202,6 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
           <span className="pcard-match__label">match</span>
         </div>
       </div>
-
       {modal && <InterestModal property={p} onClose={() => setModal(false)} onSent={() => { setSent(true); setModal(false); }} />}
     </div>
   );
