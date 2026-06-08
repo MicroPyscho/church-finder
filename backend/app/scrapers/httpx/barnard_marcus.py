@@ -6,9 +6,9 @@ class BarnardMarcusScraper(BaseScraper):
     source_name = "Barnard Marcus Auctions"
     source_type = "httpx"
     SEARCHES = [
-        "https://www.barnardmarcus.co.uk/auctions/results/?q=former+church",
-        "https://www.barnardmarcus.co.uk/auctions/results/?q=chapel",
-        "https://www.barnardmarcus.co.uk/auctions/results/?q=place+of+worship",
+        "https://www.barnardmarcus.co.uk/auctions/?q=church",
+        "https://www.barnardmarcus.co.uk/auctions/?q=chapel",
+        "https://www.barnardmarcus.co.uk/auctions/?q=place+of+worship",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -20,35 +20,35 @@ class BarnardMarcusScraper(BaseScraper):
                 if r.status_code != 200:
                     continue
                 soup = BeautifulSoup(r.text, "lxml")
-                for card in soup.select("div[class*=lot], div[class*=property], article"):
-                    link = card.select_one("a[href*='/auctions/']")
-                    if not link:
-                        continue
-                    href = link.get("href", "")
+
+                # Only pick up auction lot links — must contain /auctions/ in href
+                for a in soup.select("a[href*='/auctions/']"):
+                    href = a.get("href", "")
                     if not href.startswith("http"):
                         href = "https://www.barnardmarcus.co.uk" + href
-                    if href in seen:
+                    # Skip search/nav pages
+                    if href in seen or href == url:
                         continue
-                    text = card.get_text(" ", strip=True)
-                    # Strict check — must mention church/chapel/worship explicitly
-                    if not any(kw in text.lower() for kw in [
-                        "church", "chapel", "worship", "ecclesiastical",
-                        "former church", "former chapel", "gospel hall"
-                    ]):
+                    if not any(x in href for x in ["/lot/", "/lots/", "/property/", "/auction/"]):
                         continue
-                    # Must NOT be just a street address
-                    if is_genuine_church("", text) is False:
+
+                    parent = a.find_parent()
+                    text = parent.get_text(" ", strip=True) if parent else a.get_text(strip=True)
+
+                    if not is_genuine_church("", text):
                         continue
+
                     seen.add(href)
-                    title_el = card.select_one("h2, h3, [class*=title], [class*=address]")
-                    title = title_el.get_text(strip=True) if title_el else text[:120]
-                    addr_el = card.select_one("[class*=address], [class*=location]")
-                    location = addr_el.get_text(strip=True)[:60] if addr_el else "England"
+                    title_el = (parent.select_one("h2, h3, [class*=title]") if parent else None)
+                    title = title_el.get_text(strip=True) if title_el else a.get_text(strip=True) or text[:120]
+
                     results.append(self.make_listing(
                         url=href, title=title,
                         price_raw=extract_price(text) or "Enquire",
-                        location=location, description=text[:400],
-                        property_type=classify(text), listing_type="auction",
+                        location="London / South East",
+                        description=text[:400],
+                        property_type=classify(text),
+                        listing_type="auction",
                     ))
             except Exception as e:
                 self.logger.warning("BarnardMarcus %s: %s", url, e)

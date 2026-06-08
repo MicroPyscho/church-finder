@@ -1,7 +1,3 @@
-"""
-BidX1 — online auction house, active in UK and Ireland.
-Lists churches and chapels across UK.
-"""
 import asyncio
 from bs4 import BeautifulSoup
 from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, classify, extract_price
@@ -10,9 +6,10 @@ class BidX1Scraper(BaseScraper):
     source_name = "BidX1 Auctions"
     source_type = "httpx"
     SEARCHES = [
-        "https://www.bidx1.com/en-gb/property?keywords=church",
-        "https://www.bidx1.com/en-gb/property?keywords=chapel",
-        "https://www.bidx1.com/en-gb/property?keywords=place+of+worship",
+        "https://www.bidx1.com/en/gb/property?keywords=church",
+        "https://www.bidx1.com/en/gb/property?keywords=chapel",
+        "https://www.bidx1.com/en/gb/property?keywords=place+of+worship",
+        "https://www.bidx1.com/en/gb/property?keywords=former+church",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -22,11 +19,12 @@ class BidX1Scraper(BaseScraper):
             try:
                 r = await client.get(url, timeout=15, follow_redirects=True)
                 if r.status_code != 200:
+                    self.logger.debug("BidX1 %d: %s", r.status_code, url)
                     continue
                 soup = BeautifulSoup(r.text, "lxml")
                 for card in soup.select(
                     "div[class*=property], article, li[class*=lot], "
-                    "div[class*=card], div[class*=listing]"
+                    "div[class*=card], div[class*=listing], div[class*=result]"
                 ):
                     link = card.select_one("a[href]")
                     if not link:

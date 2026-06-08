@@ -44,6 +44,9 @@ from app.scrapers.httpx.land_registry            import LandRegistryScraper
 from app.scrapers.httpx.gov_uk                   import GovUKScraper
 from app.scrapers.httpx.planning                 import PlanningSignalScraper
 
+from app.scrapers.playwright.btg_eddisons import BTGEddisonsScraper
+from app.scrapers.playwright.onthemarket_full import OnTheMarketFullScraper
+
 # ── Active scrapers dict ───────────────────────────────────────────────────
 
 SCRAPERS: dict[str, type] = {
@@ -61,11 +64,13 @@ SCRAPERS: dict[str, type] = {
     "auction_house":                AuctionHouseScraper,
     "barnard_marcus":               BarnardMarcusScraper,
     "pugh_auctions":                PughAuctionsScraper,
+    "btg_eddisons":                BTGEddisonsScraper,
     "paul_fosh":                    PaulFoshScraper,
     "bidx1":                        BidX1Scraper,
 
     # ── Property portals ──
     "onthemarket":                  OnTheMarketScraper,
+    "onthemarket_full":             OnTheMarketFullScraper,
     "rightmove":                    RightmoveChapelsScraper,
     "openrent":                     OpenRentScraper,
     "jitty":                        JittyScraper,

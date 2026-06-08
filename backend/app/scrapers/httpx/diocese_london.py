@@ -1,14 +1,14 @@
 import asyncio
 from bs4 import BeautifulSoup
-from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, extract_price
+from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, extract_price, classify
 
 class DioceseLondonScraper(BaseScraper):
     source_name = "Diocese of London"
     source_type = "httpx"
     URLS = [
-        "https://www.london.anglican.org/articles/property/",
-        "https://www.london.anglican.org/articles/church-buildings-for-sale/",
-        "https://www.london.anglican.org/mission/church-buildings/buildings-for-sale/",
+        "https://www.london.anglican.org/articles/church-buildings-for-sale-or-new-use/",
+        "https://www.london.anglican.org/articles/church-buildings/",
+        "https://www.london.anglican.org/mission/church-buildings/",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -20,7 +20,17 @@ class DioceseLondonScraper(BaseScraper):
                 if r.status_code != 200:
                     continue
                 soup = BeautifulSoup(r.text, "lxml")
-                for item in soup.select("article, div[class*=property], div[class*=listing], div[class*=card]"):
+
+                # Diocese pages use article/richtext blocks
+                for item in soup.select(
+                    "article, div[class*=richtext], div[class*=content], "
+                    "div[class*=block], li[class*=item]"
+                ):
+                    text = item.get_text(" ", strip=True)
+                    if not is_genuine_church("", text):
+                        continue
+                    if len(text) < 30:
+                        continue
                     link = item.select_one("a[href]")
                     if not link:
                         continue
@@ -29,12 +39,9 @@ class DioceseLondonScraper(BaseScraper):
                         href = "https://www.london.anglican.org" + href
                     if href in seen:
                         continue
-                    text = item.get_text(" ", strip=True)
-                    if not is_genuine_church("", text):
-                        continue
                     seen.add(href)
                     title_el = item.select_one("h2, h3, h4, [class*=title]")
-                    title = title_el.get_text(strip=True) if title_el else text[:120]
+                    title = title_el.get_text(strip=True) if title_el else link.get_text(strip=True) or text[:120]
                     results.append(self.make_listing(
                         url=href, title=title,
                         price_raw=extract_price(text) or "Enquire",
@@ -42,7 +49,7 @@ class DioceseLondonScraper(BaseScraper):
                         property_type="church",
                     ))
             except Exception as e:
-                self.logger.warning("Diocese London %s: %s", url, e)
+                self.logger.warning("DioceseLondon %s: %s", url, e)
             await asyncio.sleep(1)
         self.log_result(len(results))
         return results
