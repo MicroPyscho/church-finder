@@ -5,7 +5,7 @@ from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, cl
 class CliveEmsonScraper(BaseScraper):
     source_name = "Clive Emson Auctions"
     source_type = "httpx"
-    TERMS = ["church","chapel","hall","former+school","community+hall","place+of+worship"]
+    TERMS = ["church","chapel","cathedral","hall","former+church","former+chapel","place+of+worship","gospel+hall","ecclesiastical","community+hall","tabernacle","meeting+house","church+building","religious+building"]
 
     async def scrape(self, client) -> list[ScrapedListing]:
         results = []; seen = set()

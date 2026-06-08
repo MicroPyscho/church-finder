@@ -1,22 +1,37 @@
 """
 SW Property — specialist ecclesiastical and community property agent.
-Handles churches, chapels, halls, manses and other faith buildings.
 """
 import asyncio
+import re
 from bs4 import BeautifulSoup
-from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, classify, extract_price
+from app.scrapers.base import BaseScraper, ScrapedListing, classify, extract_price
+
+# Must contain one of these to be a genuine church property
+CHURCH_TERMS = [
+    "church", "chapel", "ecclesiastical", "place of worship",
+    "gospel hall", "meeting house", "tabernacle", "minster",
+    "priory", "abbey","churches", "religious", "religion", "catholic", "anglican", "cathedral", "local church", "religious place", "place of gathering", "church hall", "vestry", "nave", "parish",
+    "methodist", "baptist", "evangelical", "united reformed",
+    "salvation army", "quaker", "citadel", "bethel",
+]
+
+# Reject if title is just a street address near a church
+FALSE_POSITIVE_PATTERNS = re.compile(
+    r'^\d+\s+\w+\s+(?:street|road|lane|avenue|close|court|place|way)\b'
+    r'|^unit\s+\d+'
+    r'|^land\s+to\s+the',
+    re.IGNORECASE,
+)
 
 class SWPropertyScraper(BaseScraper):
     source_name = "SW Property"
     source_type = "httpx"
     URLS = [
-        "https://www.sw.co.uk/properties/?type=church",
-        "https://www.sw.co.uk/properties/?type=chapel",
-        "https://www.sw.co.uk/properties/?type=place-of-worship",
         "https://www.sw.co.uk/properties/?keyword=church",
         "https://www.sw.co.uk/properties/?keyword=chapel",
-        "https://www.sw.co.uk/properties/?keyword=gospel+hall",
         "https://www.sw.co.uk/properties/?keyword=place+of+worship",
+        "https://www.sw.co.uk/properties/?keyword=gospel+hall",
+        "https://www.sw.co.uk/properties/?keyword=ecclesiastical",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -27,21 +42,12 @@ class SWPropertyScraper(BaseScraper):
             try:
                 r = await client.get(url, timeout=20, follow_redirects=True)
                 if r.status_code != 200:
-                    self.logger.debug("SW %s: %d", url, r.status_code)
                     continue
-
                 soup = BeautifulSoup(r.text, "lxml")
-
-                # SW uses standard property listing cards
                 cards = soup.select(
                     "div[class*=property], article[class*=property], "
-                    "li[class*=property], div[class*=listing]"
+                    "li[class*=property], div[class*=listing], article, div[class*=card]"
                 )
-
-                if not cards:
-                    # Try generic article/card selectors
-                    cards = soup.select("article, div[class*=card]")
-
                 for card in cards:
                     link = card.select_one("a[href]")
                     if not link:
@@ -49,20 +55,23 @@ class SWPropertyScraper(BaseScraper):
                     href = link.get("href", "")
                     if not href.startswith("http"):
                         href = "https://www.sw.co.uk" + href
-                    # Must be a property URL
-                    if "sw.co.uk" not in href:
-                        continue
-                    if href in seen:
+                    if "sw.co.uk" not in href or href in seen:
                         continue
 
                     text = card.get_text(" ", strip=True)
-                    if not is_genuine_church("", text):
+                    title_el = card.select_one("h2, h3, h4, [class*=title], [class*=address]")
+                    title = title_el.get_text(strip=True) if title_el else text[:120]
+
+                    # Reject false positives
+                    if FALSE_POSITIVE_PATTERNS.match(title):
+                        continue
+
+                    # Must have a church keyword in title or description
+                    combined = (title + " " + text).lower()
+                    if not any(t in combined for t in CHURCH_TERMS):
                         continue
 
                     seen.add(href)
-
-                    title_el = card.select_one("h2, h3, h4, [class*=title], [class*=address]")
-                    title = title_el.get_text(strip=True) if title_el else text[:120]
 
                     price_el = card.select_one("[class*=price]")
                     price = price_el.get_text(strip=True) if price_el else extract_price(text) or "Enquire"
@@ -76,48 +85,15 @@ class SWPropertyScraper(BaseScraper):
                         image_url = "https://www.sw.co.uk" + image_url
 
                     results.append(self.make_listing(
-                        url=href,
-                        title=title,
-                        price_raw=price,
-                        location=location,
-                        description=text[:500],
+                        url=href, title=title, price_raw=price,
+                        location=location, description=text[:500],
                         property_type=classify(title + " " + text),
                         image_url=image_url,
                         images_json=[image_url] if image_url else [],
                     ))
-
             except Exception as e:
-                self.logger.warning("SW Property %s: %s", url, e)
+                self.logger.warning("SW %s: %s", url, e)
             await asyncio.sleep(1)
-
-        # Also try the sitemap approach — fetch listings by URL pattern
-        if not results:
-            try:
-                r = await client.get("https://www.sw.co.uk/properties/", timeout=20, follow_redirects=True)
-                if r.status_code == 200:
-                    soup = BeautifulSoup(r.text, "lxml")
-                    for a in soup.select("a[href*='/properties/']"):
-                        href = a.get("href", "")
-                        if not href.startswith("http"):
-                            href = "https://www.sw.co.uk" + href
-                        if href in seen or href == "https://www.sw.co.uk/properties/":
-                            continue
-                        text = a.get_text(strip=True)
-                        if not is_genuine_church("", text) and not any(
-                            kw in href.lower() for kw in ["church", "chapel", "worship", "gospel", "hall"]
-                        ):
-                            continue
-                        seen.add(href)
-                        results.append(self.make_listing(
-                            url=href,
-                            title=text[:120] or href.split("/")[-2].replace("-", " ").title(),
-                            price_raw="Enquire",
-                            location="England",
-                            description=text[:400],
-                            property_type="church",
-                        ))
-            except Exception as e:
-                self.logger.warning("SW Property fallback: %s", e)
 
         self.log_result(len(results))
         return results

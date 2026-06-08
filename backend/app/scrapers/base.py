@@ -36,18 +36,31 @@ class ScrapedListing:
         return sum([has_title, has_url, has_location]) >= 2
 
 
+# All keywords that indicate a genuine church/worship property
 CHURCH_KEYWORDS = [
-    "church", "chapel", "ecclesiastical", "vestry", "nave",
-    "place of worship", "tabernacle", "minster", "priory", "abbey",
+    # Core terms
+    "church", "churches", "chapel", "chapels", "ecclesiastical",
+    "vestry", "nave", "place of worship", "places of worship",
+    "tabernacle", "minster", "priory", "abbey", "cathedral",
     "meeting house", "mission hall", "former church", "redundant church",
-    "methodist", "baptist", "gospel hall", "kingdom hall",
+    # Specific building types
+    "gospel hall", "kingdom hall", "bethel", "bethesda", "ebenezer",
+    "zion chapel", "memorial hall", "temperance hall", "citadel",
     "village hall", "community hall", "assembly hall", "masonic hall",
+    "church hall", "church auditorium", "church building",
     "memorial hall", "drill hall", "civic hall", "parish hall",
-    "former theatre", "former cinema", "bingo hall", "former school",
-    "graveyard", "churchyard", "vestry", "presbytery",
+    "local church", "religious building", "place of gathering",
+    # Denominations
+    "methodist", "baptist", "gospel", "evangelical", "pentecostal",
+    "united reformed", "salvation army", "quaker", "anglican",
+    "presbyterian", "congregational", "wesleyan", "primitive methodist",
+    "free church", "brethren hall", "urc", "reformed",
+    # Conversion terms
     "converted chapel", "converted church", "church conversion",
-    "united reformed", "salvation army", "quaker", "evangelical",
-    "pentecostal", "diocese",
+    "former chapel", "former cathedral", "redundant chapel",
+    "former place of worship", "former religious",
+    # Diocese/admin
+    "diocese", "parish", "congregation", "vestry", "presbytery",
 ]
 
 FALSE_POSITIVE_RE = re.compile(
@@ -64,16 +77,16 @@ FALSE_POSITIVE_RE = re.compile(
 )
 
 ARTICLE_SIGNALS = [
-    "article page", "02/12/2021", "07/07/2020", "visit reports",
-    "auspicious moments", "windrush generation", "caribbean contribution",
-    "passivhaus", "urgent fabric", "open doors project",
-    "faith in the future", "regenerate!", "why are historic",
+    "article page", "visit reports", "auspicious moments",
+    "windrush generation", "passivhaus", "urgent fabric",
+    "open doors project", "faith in the future", "why are historic",
 ]
 
 
 def is_genuine_church(title: str, description: str = "") -> bool:
-    combined  = (title + " " + description).lower()
+    combined   = (title + " " + description).lower()
     title_lower = title.lower()
+
     if not any(kw in combined for kw in CHURCH_KEYWORDS):
         return False
     if any(sig in combined for sig in ARTICLE_SIGNALS):
@@ -95,16 +108,18 @@ def is_genuine_church(title: str, description: str = "") -> bool:
 
 def classify(text: str) -> str:
     t = text.lower()
-    if any(k in t for k in ["church","chapel","ecclesiastical","vestry",
-                              "tabernacle","place of worship","gospel hall",
-                              "meeting house","nave","minster","priory","abbey"]):
+    if any(k in t for k in ["church", "chapel", "ecclesiastical", "vestry",
+                              "tabernacle", "place of worship", "gospel hall",
+                              "meeting house", "nave", "minster", "priory",
+                              "abbey", "cathedral", "auditorium", "religious building"]):
         return "church"
-    if any(k in t for k in ["village hall","community hall","masonic",
-                              "memorial hall","drill hall","parish hall",
-                              "working men","civic hall","assembly hall"]):
+    if any(k in t for k in ["village hall", "community hall", "masonic",
+                              "memorial hall", "drill hall", "parish hall",
+                              "church hall", "assembly hall", "civic hall",
+                              "place of gathering"]):
         return "hall"
-    if any(k in t for k in ["warehouse","mill","theatre","cinema",
-                              "bingo hall","former school","leisure centre","barn"]):
+    if any(k in t for k in ["warehouse", "mill", "theatre", "cinema",
+                              "bingo hall", "former school", "barn"]):
         return "large_space"
     return "other"
 
@@ -114,12 +129,7 @@ def extract_price(text: str) -> str:
     return m.group(0) if m else ""
 
 
-async def scrape_images_from_page(client, url: str, selectors: list[str] = None) -> list[str]:
-    """
-    Generic image scraper for a property detail page.
-    Tries multiple selectors and falls back to og:image.
-    Returns up to 5 image URLs.
-    """
+async def scrape_images_from_page(client, url: str, selectors: list = None) -> list[str]:
     try:
         r = await client.get(url, timeout=15, follow_redirects=True)
         if r.status_code != 200:
@@ -127,35 +137,26 @@ async def scrape_images_from_page(client, url: str, selectors: list[str] = None)
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(r.text, "lxml")
         images = []
-
-        # Try provided selectors first
         default_selectors = selectors or [
-            "div[class*=gallery] img",
-            "div[class*=slider] img",
-            "div[class*=carousel] img",
-            "div[class*=photo] img",
-            "div[class*=image] img",
-            "figure img",
-            "div[class*=property] img",
+            "div[class*=gallery] img", "div[class*=slider] img",
+            "div[class*=carousel] img", "div[class*=photo] img",
+            "figure img", "div[class*=property] img",
         ]
         for sel in default_selectors:
             for img in soup.select(sel):
                 src = (img.get("src") or img.get("data-src") or
-                       img.get("data-lazy-src") or img.get("data-original",""))
+                       img.get("data-lazy-src") or img.get("data-original", ""))
                 if src and src.startswith("http") and src not in images:
                     if not any(x in src for x in ["logo","icon","avatar","banner","placeholder"]):
                         images.append(src)
             if images:
                 break
-
-        # Fallback: og:image
         if not images:
-            for meta in soup.select("meta[property='og:image'], meta[name='og:image']"):
-                content = meta.get("content","")
+            for meta in soup.select("meta[property='og:image']"):
+                content = meta.get("content", "")
                 if content and content.startswith("http"):
                     images.append(content)
                     break
-
         return images[:5]
     except Exception as e:
         logger.debug("Image scrape failed for %s: %s", url, e)
