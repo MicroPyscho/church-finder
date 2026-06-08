@@ -88,8 +88,19 @@ class OnTheMarketFullScraper(BaseScraper):
                     title = h1.get_text(strip=True) if h1 else ""
 
                     # Must be a genuine church property
+                    # Check description specifically - title alone is unreliable on OTM
                     page_text = soup.get_text(" ", strip=True)
-                    if not is_genuine_church(title, page_text):
+                    desc_check = desc_el.get_text(strip=True) if desc_el else page_text[:1000]
+                    # Require church keyword in BOTH title/address AND description
+                    if not is_genuine_church(title, desc_check):
+                        continue
+                    # Extra check: description must explicitly mention church/chapel terms
+                    desc_lower = desc_check.lower()
+                    if not any(kw in desc_lower for kw in [
+                        "chapel", "church", "ecclesiastical", "place of worship",
+                        "worship", "nave", "vestry", "congregation",
+                        "methodist", "baptist", "gospel hall",
+                    ]):
                         continue
 
                     # Price

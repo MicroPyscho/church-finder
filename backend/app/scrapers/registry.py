@@ -45,6 +45,7 @@ from app.scrapers.httpx.gov_uk                   import GovUKScraper
 from app.scrapers.httpx.planning                 import PlanningSignalScraper
 
 from app.scrapers.playwright.btg_eddisons import BTGEddisonsScraper
+from app.scrapers.playwright.rightmove import RightmoveScraper as RightmovePlaywrightScraper
 from app.scrapers.playwright.onthemarket_full import OnTheMarketFullScraper
 
 # ── Active scrapers dict ───────────────────────────────────────────────────
@@ -72,6 +73,7 @@ SCRAPERS: dict[str, type] = {
     "onthemarket":                  OnTheMarketScraper,
     "onthemarket_full":             OnTheMarketFullScraper,
     "rightmove":                    RightmoveChapelsScraper,
+    "rightmove_playwright":          RightmovePlaywrightScraper,
     "openrent":                     OpenRentScraper,
     "jitty":                        JittyScraper,
 
