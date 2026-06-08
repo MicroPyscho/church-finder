@@ -1,6 +1,12 @@
 """
 Image service for Sanctuary.
-Writes to Mac first — never directly to container.
+Priority:
+1. Images scraped from source listing page (scrapers handle this)
+2. Bing image search: property name + full address/postcode (precise)
+3. OSM static map using postcode (always works)
+
+No watermarked images (Alamy, Getty, Shutterstock etc).
+Cached in DB — called at most once per listing.
 """
 import asyncio
 import json
@@ -20,14 +26,15 @@ HEADERS = {
 WATERMARKED = [
     "alamy.com", "gettyimages", "shutterstock", "istockphoto",
     "istock.com", "123rf.com", "dreamstime", "depositphotos",
-    "adobestock", "stock.adobe", "bigstockphoto",
+    "adobestock", "stock.adobe", "bigstockphoto", "fotolia",
 ]
 
 PREFERRED = [
     "visitchurches.org.uk", "geograph.org", "britishlistedbuildings",
     "historicengland.org.uk", "britainexpress.com", "seearoundbritain",
     "londonchurchbuildings", "churches-uk-ireland.org",
-    "wikimedia.org", "wikipedia.org",
+    "wikimedia.org", "wikipedia.org", "churchesconservationtrust",
+    "heritagegateway.org.uk", "coflein.gov.wales",
 ]
 
 
@@ -69,28 +76,52 @@ def osm_map_url(lat: float, lng: float) -> str:
     )
 
 
-def clean_for_search(title: str) -> str:
-    junk = [
-        r'\bLOT\s+\d+\b', r'\bGUIDE\s+PRICE\b', r'\bNIL\s+RESERVE\b',
-        r'\bFREEHOLD\b', r'\bLEASEHOLD\b', r'£[\d,]+(\s*[-–]\s*£[\d,]+)?',
-        r'\bPOTENTIAL\b', r'\bFOUR\s+FLOORS?\b', r'\bTHREE\s+FLOORS?\b',
-        r'\b(WITH|AND|THE|A|AN)\b', r'\bOVER\b', r'\bTOWN\s+CENTRE\b',
-    ]
-    result = title
-    for p in junk:
-        result = re.sub(p, ' ', result, flags=re.IGNORECASE)
-    return re.sub(r'\s+', ' ', result).strip()
+def build_image_query(title: str, location: str, description: str) -> str:
+    """
+    Build the most precise possible image search query.
+    Priority: church name + postcode > church name + address > church name + location
+    """
+    # Clean auction jargon from title
+    clean_title = re.sub(
+        r'\b(LOT\s+\d+|GUIDE\s+PRICE|NIL\s+RESERVE|FREEHOLD|LEASEHOLD|'
+        r'FOR\s+SALE|TO\s+LET|AUCTION|OFFERS?\s+(OVER|IN\s+EXCESS)|'
+        r'POTENTIAL|FOUR\s+FLOORS?|THREE\s+FLOORS?|TOWN\s+CENTRE)\b',
+        '', title, flags=re.IGNORECASE
+    )
+    clean_title = re.sub(r'\s+', ' ', clean_title).strip()
+
+    # Try to get postcode from location or description
+    all_text = f"{location} {description}"
+    pc_match = re.search(r'\b([A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2})\b', all_text.upper())
+    postcode = pc_match.group(1) if pc_match else None
+
+    # Try to extract street address from location
+    # CoE location format: "Church Road, South Hylton" or "Landor Road, London, SW9 9JE"
+    address_parts = [p.strip() for p in location.split(",") if p.strip()]
+
+    if postcode:
+        # Most precise: name + postcode
+        return f"{clean_title} {postcode}".strip()
+    elif len(address_parts) >= 2:
+        # Name + first address line + town
+        return f"{clean_title} {address_parts[0]} {address_parts[-1]}".strip()
+    else:
+        # Name + location
+        return f"{clean_title} {location}".strip()
 
 
 async def search_bing_images(query: str, max_count: int = 3) -> list[str]:
+    """Search Bing Images. No watermarks. Prefer heritage sources."""
     try:
         url = f"https://www.bing.com/images/search?q={urllib.parse.quote(query)}&form=HDRSC2"
         async with httpx.AsyncClient(headers=HEADERS, timeout=15, follow_redirects=True) as c:
             r = await c.get(url)
             if r.status_code != 200:
                 return []
+
         soup = BeautifulSoup(r.text, "lxml")
         preferred, others = [], []
+
         for a in soup.select("a.iusc"):
             try:
                 data = json.loads(a.get("m", "{}"))
@@ -99,40 +130,55 @@ async def search_bing_images(query: str, max_count: int = 3) -> list[str]:
                     continue
                 if is_watermarked(img):
                     continue
-                if any(x in img.lower() for x in ["logo","icon","avatar","banner","placeholder"]):
+                if any(x in img.lower() for x in ["logo", "icon", "avatar", "banner", "placeholder"]):
                     continue
                 (preferred if is_preferred(img) else others).append(img)
             except:
                 continue
+
         results = (preferred + others)[:max_count]
-        logger.info("Bing '%s': %d images", query[:40], len(results))
+        logger.info("Bing '%s': %d images (%d preferred)", query[:50], len(results), len(preferred))
         return results
+
     except Exception as e:
         logger.warning("Bing search failed: %s", e)
         return []
 
 
-async def get_images_for_listing(title: str, location: str, description: str = "") -> list[str]:
-    pc = await extract_postcode(description or "")
-    if not pc:
-        pc = await extract_postcode(location or "")
-
-    clean = clean_for_search(title)
-    query = f"{clean} {pc or location}".strip()
-
+async def get_images_for_listing(
+    title: str,
+    location: str,
+    description: str = "",
+) -> list[str]:
+    """
+    Get images for a listing with no existing images.
+    Uses precise query: name + postcode/address.
+    Falls back to OSM map if no images found.
+    """
+    query = build_image_query(title, location, description)
     images = []
+
     if query and len(query) > 5:
         images = await search_bing_images(query, max_count=3)
+        logger.info("Image query: '%s' → %d results", query[:60], len(images))
 
-    if not images and pc:
-        latlon = await postcode_to_latlon(pc)
-        if latlon:
-            images = [osm_map_url(*latlon)]
+    # OSM map fallback
+    if not images:
+        pc = await extract_postcode(f"{location} {description}")
+        if pc:
+            latlon = await postcode_to_latlon(pc)
+            if latlon:
+                images = [osm_map_url(*latlon)]
+                logger.info("OSM fallback for postcode %s", pc)
 
     return images
 
 
 async def enrich_all_without_images(db, limit: int = 50) -> int:
+    """
+    Background job. Find listings with no images and fetch them.
+    Each listing processed at most once — result cached in DB.
+    """
     from sqlalchemy import text
 
     rows = (await db.execute(text(
@@ -170,7 +216,7 @@ async def enrich_all_without_images(db, limit: int = 50) -> int:
 
 
 async def replace_watermarked_images(db) -> int:
-    """Find listings with Alamy/watermarked images and replace them."""
+    """Replace any listings that have watermarked images."""
     from sqlalchemy import text
 
     rows = (await db.execute(text(
@@ -184,7 +230,6 @@ async def replace_watermarked_images(db) -> int:
             imgs = json.loads(row.images) if row.images else []
             if not any(is_watermarked(img) for img in imgs):
                 continue
-            # Replace watermarked images
             new_images = await get_images_for_listing(
                 title=row.title or "",
                 location=row.location or "",

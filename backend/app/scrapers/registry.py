@@ -24,6 +24,7 @@ from app.scrapers.charities                import CharitiesScraper
 from app.scrapers.companies_house          import CompaniesHouseScraper
 from app.scrapers.land_registry            import LandRegistryScraper
 from app.scrapers.gov_uk                   import GovUKScraper
+from app.scrapers.sw_property             import SWPropertyScraper
 from app.scrapers.planning                 import PlanningSignalScraper
 
 SCRAPERS: dict[str, type] = {
@@ -59,6 +60,7 @@ SCRAPERS: dict[str, type] = {
     "companies_house":              CompaniesHouseScraper,
     "land_registry":                LandRegistryScraper,
     "gov_uk":                       GovUKScraper,
+    "sw_property":                  SWPropertyScraper,
     "planning":                     PlanningSignalScraper,
 }
 
