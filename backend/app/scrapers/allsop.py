@@ -6,10 +6,11 @@ class AllsopScraper(BaseScraper):
     source_name = "Allsop Auctions"
     source_type = "httpx"
     SEARCHES = [
-        "https://www.allsop.co.uk/property-search/?type=commercial&kw=church",
-        "https://www.allsop.co.uk/property-search/?type=commercial&kw=chapel",
-        "https://www.allsop.co.uk/property-search/?type=residential&kw=chapel",
-        "https://www.allsop.co.uk/property-search/?type=residential&kw=church+conversion",
+        "https://www.allsop.co.uk/search/?q=church",
+        "https://www.allsop.co.uk/search/?q=chapel",
+        "https://www.allsop.co.uk/search/?q=place+of+worship",
+        "https://www.allsop.co.uk/search/?q=former+church",
+        "https://www.allsop.co.uk/search/?q=gospel+hall",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -21,26 +22,30 @@ class AllsopScraper(BaseScraper):
                 if r.status_code != 200:
                     continue
                 soup = BeautifulSoup(r.text, "lxml")
-                for card in soup.select("article, div[class*=property], div[class*=lot], li[class*=property]"):
-                    link = card.select_one("a[href]")
-                    if not link:
-                        continue
-                    href = link.get("href", "")
+
+                # Find all links to individual property pages
+                for a in soup.select("a[href]"):
+                    href = a.get("href", "")
                     if not href.startswith("http"):
                         href = "https://www.allsop.co.uk" + href
+                    # Allsop property URLs contain /lot/ or /property/
+                    if not any(x in href for x in ["/lot/", "/property/", "/residential/", "/commercial/"]):
+                        continue
                     if href in seen:
                         continue
-                    text = card.get_text(" ", strip=True)
-                    if not is_genuine_church("", text):
+                    text = a.get_text(" ", strip=True)
+                    parent = a.find_parent()
+                    parent_text = parent.get_text(" ", strip=True) if parent else text
+                    if not is_genuine_church("", parent_text):
                         continue
                     seen.add(href)
-                    title_el = card.select_one("h2, h3, [class*=title]")
-                    title = title_el.get_text(strip=True) if title_el else text[:120]
                     results.append(self.make_listing(
-                        url=href, title=title,
-                        price_raw=extract_price(text) or "Enquire",
-                        location="England", description=text[:400],
-                        property_type=classify(text),
+                        url=href,
+                        title=text[:120] or parent_text[:120],
+                        price_raw=extract_price(parent_text) or "Enquire",
+                        location="England",
+                        description=parent_text[:400],
+                        property_type=classify(parent_text),
                         listing_type="auction",
                     ))
             except Exception as e:

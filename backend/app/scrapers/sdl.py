@@ -6,9 +6,11 @@ class SDLScraper(BaseScraper):
     source_name = "SDL Auctions"
     source_type = "httpx"
     SEARCHES = [
-        "https://www.sdlauctions.co.uk/properties/for-sale/?search=church",
-        "https://www.sdlauctions.co.uk/properties/for-sale/?search=chapel",
-        "https://www.sdlauctions.co.uk/properties/for-sale/?search=place+of+worship",
+        "https://www.sdlauctions.co.uk/search/?q=church",
+        "https://www.sdlauctions.co.uk/search/?q=chapel",
+        "https://www.sdlauctions.co.uk/search/?q=place+of+worship",
+        "https://www.sdlauctions.co.uk/search/?q=former+church",
+        "https://www.sdlauctions.co.uk/search/?q=gospel+hall",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -18,10 +20,13 @@ class SDLScraper(BaseScraper):
             try:
                 r = await client.get(url, timeout=15, follow_redirects=True)
                 if r.status_code != 200:
-                    self.logger.warning("SDL %s: %d", url, r.status_code)
                     continue
                 soup = BeautifulSoup(r.text, "lxml")
-                for card in soup.select("div[class*=property], article, li[class*=result]"):
+
+                for card in soup.select(
+                    "div[class*=property], article, li[class*=result], "
+                    "div[class*=lot], div[class*=listing], div[class*=card]"
+                ):
                     link = card.select_one("a[href]")
                     if not link:
                         continue
@@ -42,8 +47,7 @@ class SDLScraper(BaseScraper):
                         url=href, title=title,
                         price_raw=extract_price(text) or "Enquire",
                         location=location, description=text[:400],
-                        property_type=classify(text),
-                        listing_type="auction",
+                        property_type=classify(text), listing_type="auction",
                     ))
             except Exception as e:
                 self.logger.warning("SDL %s: %s", url, e)
