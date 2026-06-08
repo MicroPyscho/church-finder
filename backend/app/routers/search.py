@@ -221,6 +221,8 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
         "intent": intent,
         "results": results,
         "total": total,
+        "pages": (total + req.per_page - 1) // req.per_page,
+        "pages": (total + req.per_page - 1) // req.per_page,
         "page": req.page,
         "per_page": req.per_page,
         "is_relevant_query": True,
