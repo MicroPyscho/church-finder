@@ -1,3 +1,6 @@
+"""
+Base classes and utilities shared by all scrapers.
+"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
@@ -10,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ScrapedListing:
+    """Represents a single property listing found by a scraper."""
     source:        str
     url:           str
     title:         str
@@ -19,7 +23,7 @@ class ScrapedListing:
     postcode:      str           = ""
     description:   str           = ""
     property_type: str           = "other"
-    listing_type:  str           = "sale"
+    listing_type:  str           = "sale"   # sale | let | auction
     image_url:     Optional[str] = None
     images_json:   list          = field(default_factory=list)
     is_signal:     bool          = False
@@ -27,42 +31,46 @@ class ScrapedListing:
 
     @property
     def id(self) -> str:
+        """Stable unique ID based on source + URL."""
         return hashlib.md5(f"{self.source}:{self.url}".encode()).hexdigest()
 
     def is_valid(self) -> bool:
+        """Must have title + URL, or title + location."""
         has_title    = bool(self.title and len(self.title.strip()) > 5)
         has_url      = bool(self.url and self.url.startswith("http"))
         has_location = bool(self.location and len(self.location.strip()) > 2)
         return sum([has_title, has_url, has_location]) >= 2
 
 
-# All keywords that indicate a genuine church/worship property
+# ── Keyword lists ──────────────────────────────────────────────────────────
+
 CHURCH_KEYWORDS = [
-    # Core terms
+    # Core
     "church", "churches", "chapel", "chapels", "ecclesiastical",
-    "vestry", "nave", "place of worship", "places of worship",
-    "tabernacle", "minster", "priory", "abbey", "cathedral",
+    "place of worship", "places of worship",
+    "nave", "vestry", "tabernacle", "minster", "priory", "abbey", "cathedral",
     "meeting house", "mission hall", "former church", "redundant church",
-    # Specific building types
+    # Building types
     "gospel hall", "kingdom hall", "bethel", "bethesda", "ebenezer",
-    "zion chapel", "memorial hall", "temperance hall", "citadel",
-    "village hall", "community hall", "assembly hall", "masonic hall",
     "church hall", "church auditorium", "church building",
+    "village hall", "community hall", "assembly hall", "masonic hall",
     "memorial hall", "drill hall", "civic hall", "parish hall",
     "local church", "religious building", "place of gathering",
+    "citadel", "zion chapel", "temperance hall",
     # Denominations
-    "methodist", "baptist", "gospel", "evangelical", "pentecostal",
+    "methodist", "baptist", "evangelical", "pentecostal",
     "united reformed", "salvation army", "quaker", "anglican",
-    "presbyterian", "congregational", "wesleyan", "primitive methodist",
-    "free church", "brethren hall", "urc", "reformed",
-    # Conversion terms
+    "presbyterian", "congregational", "wesleyan", "free church",
+    "brethren", "urc", "reformed",
+    # Conversions
     "converted chapel", "converted church", "church conversion",
     "former chapel", "former cathedral", "redundant chapel",
-    "former place of worship", "former religious",
-    # Diocese/admin
-    "diocese", "parish", "congregation", "vestry", "presbytery",
+    "former place of worship",
+    # Admin
+    "diocese", "parish", "congregation", "sanctuary",
 ]
 
+# Patterns where "church" appears in a street name, not a building
 FALSE_POSITIVE_RE = re.compile(
     r'church\s+(?:street|road|lane|avenue|close|drive|way|place|court|terrace|'
     r'end|hill|view|farm|gate|yard|walk|row|grove|crescent|mews|square|'
@@ -70,21 +78,20 @@ FALSE_POSITIVE_RE = re.compile(
     r'mount|bank|bridge|side|wharf|quay)\b'
     r'|charles\s+church'
     r'|church\s+&\s+\w+'
-    r'|\d+\s+church\s+(?:street|road|lane|avenue)'
-    r'|bocking\s+church\s+street'
-    r'|church\s+farm\s+lane',
+    r'|\d+\s+church\s+(?:street|road|lane|avenue)',
     re.IGNORECASE,
 )
 
 ARTICLE_SIGNALS = [
-    "article page", "visit reports", "auspicious moments",
-    "windrush generation", "passivhaus", "urgent fabric",
-    "open doors project", "faith in the future", "why are historic",
+    "article page", "visit reports", "windrush generation",
+    "passivhaus", "urgent fabric", "open doors project",
+    "faith in the future", "why are historic",
 ]
 
 
 def is_genuine_church(title: str, description: str = "") -> bool:
-    combined   = (title + " " + description).lower()
+    """Return True if this text describes a real church/chapel property."""
+    combined    = (title + " " + description).lower()
     title_lower = title.lower()
 
     if not any(kw in combined for kw in CHURCH_KEYWORDS):
@@ -92,78 +99,77 @@ def is_genuine_church(title: str, description: str = "") -> bool:
     if any(sig in combined for sig in ARTICLE_SIGNALS):
         return False
     if "church" in title_lower:
-        title_cleaned = FALSE_POSITIVE_RE.sub("", title_lower)
-        if "church" not in title_cleaned and not any(
-            kw in title_cleaned for kw in CHURCH_KEYWORDS if kw != "church"
+        cleaned = FALSE_POSITIVE_RE.sub("", title_lower)
+        if "church" not in cleaned and not any(
+            kw in cleaned for kw in CHURCH_KEYWORDS if kw != "church"
         ):
             desc_lower = description.lower()
-            redeeming = any(kw in desc_lower for kw in [
+            if not any(kw in desc_lower for kw in [
                 "chapel", "ecclesiastical", "place of worship", "worship",
                 "congregation", "former church", "nave", "vestry",
-            ])
-            if not redeeming:
+            ]):
                 return False
     return True
 
 
 def classify(text: str) -> str:
+    """Classify property type from text."""
     t = text.lower()
-    if any(k in t for k in ["church", "chapel", "ecclesiastical", "vestry",
-                              "tabernacle", "place of worship", "gospel hall",
-                              "meeting house", "nave", "minster", "priory",
-                              "abbey", "cathedral", "auditorium", "religious building"]):
+    if any(k in t for k in [
+        "church", "chapel", "ecclesiastical", "vestry", "tabernacle",
+        "place of worship", "gospel hall", "meeting house", "nave",
+        "minster", "priory", "abbey", "cathedral", "auditorium",
+        "religious building",
+    ]):
         return "church"
-    if any(k in t for k in ["village hall", "community hall", "masonic",
-                              "memorial hall", "drill hall", "parish hall",
-                              "church hall", "assembly hall", "civic hall",
-                              "place of gathering"]):
+    if any(k in t for k in [
+        "village hall", "community hall", "masonic", "memorial hall",
+        "drill hall", "parish hall", "church hall", "assembly hall",
+        "civic hall", "place of gathering",
+    ]):
         return "hall"
-    if any(k in t for k in ["warehouse", "mill", "theatre", "cinema",
-                              "bingo hall", "former school", "barn"]):
+    if any(k in t for k in [
+        "warehouse", "mill", "theatre", "cinema", "bingo hall",
+        "former school", "barn",
+    ]):
         return "large_space"
     return "other"
 
 
 def extract_price(text: str) -> str:
+    """Extract first price mention from text."""
     m = re.search(r'£[\d,]+(?:\s*[-–]\s*£[\d,]+)?', text)
     return m.group(0) if m else ""
 
 
-async def scrape_images_from_page(client, url: str, selectors: list = None) -> list[str]:
-    try:
-        r = await client.get(url, timeout=15, follow_redirects=True)
-        if r.status_code != 200:
-            return []
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "lxml")
-        images = []
-        default_selectors = selectors or [
-            "div[class*=gallery] img", "div[class*=slider] img",
-            "div[class*=carousel] img", "div[class*=photo] img",
-            "figure img", "div[class*=property] img",
-        ]
-        for sel in default_selectors:
-            for img in soup.select(sel):
-                src = (img.get("src") or img.get("data-src") or
-                       img.get("data-lazy-src") or img.get("data-original", ""))
-                if src and src.startswith("http") and src not in images:
-                    if not any(x in src for x in ["logo","icon","avatar","banner","placeholder"]):
-                        images.append(src)
-            if images:
-                break
-        if not images:
-            for meta in soup.select("meta[property='og:image']"):
-                content = meta.get("content", "")
-                if content and content.startswith("http"):
-                    images.append(content)
-                    break
-        return images[:5]
-    except Exception as e:
-        logger.debug("Image scrape failed for %s: %s", url, e)
-        return []
+def clean_text(raw: str) -> str:
+    """Remove markdown, HTML entities, and other junk from scraped text."""
+    if not raw:
+        return raw
+    t = raw
+    t = re.sub(r'^#{1,6}\s+', '', t, flags=re.MULTILINE)
+    t = re.sub(r'\*\*([^*]+)\*\*', r'\1', t)
+    t = re.sub(r'\*([^*]+)\*', r'\1', t)
+    t = re.sub(r'\[[^\]]*\]', '', t)
+    t = t.replace('&amp;', '&').replace('&nbsp;', ' ')
+    t = t.replace('\u00a0', ' ').replace('\u200b', '')
+    t = t.replace('\u2019', "'").replace('\u2013', '-').replace('\u2014', '-')
+    t = re.sub(r'https?://\S+', '', t)
+    t = re.sub(r'\n{3,}', '\n\n', t)
+    t = re.sub(r'[ \t]{2,}', ' ', t)
+    t = ' '.join(line.strip() for line in t.split('\n') if line.strip())
+    return t.strip()
 
+
+# ── Base scraper class ─────────────────────────────────────────────────────
 
 class BaseScraper(ABC):
+    """
+    Abstract base for all scrapers.
+
+    Subclasses must implement scrape(client) and set source_name.
+    source_type is either 'httpx' (default) or 'playwright'.
+    """
     source_name: str = ""
     source_type: str = "httpx"
 
@@ -172,9 +178,15 @@ class BaseScraper(ABC):
 
     @abstractmethod
     async def scrape(self, client) -> list[ScrapedListing]:
+        """
+        Scrape listings from this source.
+        client: httpx.AsyncClient for httpx scrapers,
+                playwright.Page for playwright scrapers.
+        """
         ...
 
     def make_listing(self, **kwargs) -> ScrapedListing:
+        """Create a ScrapedListing with this scraper's source_name."""
         return ScrapedListing(source=self.source_name, **kwargs)
 
     def log_result(self, count: int) -> None:
