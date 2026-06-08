@@ -42,6 +42,11 @@ from app.scrapers.httpx.charities                import CharitiesScraper
 from app.scrapers.httpx.companies_house          import CompaniesHouseScraper
 from app.scrapers.httpx.land_registry            import LandRegistryScraper
 from app.scrapers.httpx.gov_uk                   import GovUKScraper
+from app.scrapers.httpx.spab                    import SPABScraper
+from app.scrapers.httpx.historic_england        import HistoricEnglandScraper
+from app.scrapers.httpx.uk_auction_list         import UKAuctionListScraper
+from app.scrapers.httpx.eig                     import EIGScraper
+from app.scrapers.httpx.the_sale_room           import TheSaleRoomScraper
 from app.scrapers.httpx.planning                 import PlanningSignalScraper
 
 from app.scrapers.playwright.btg_eddisons import BTGEddisonsScraper
@@ -96,6 +101,11 @@ SCRAPERS: dict[str, type] = {
     "companies_house":              CompaniesHouseScraper,
     "land_registry":                LandRegistryScraper,
     "gov_uk":                       GovUKScraper,
+    "spab":                          SPABScraper,
+    "historic_england":               HistoricEnglandScraper,
+    "uk_auction_list":                UKAuctionListScraper,
+    "eig":                            EIGScraper,
+    "the_sale_room":                  TheSaleRoomScraper,
     "planning":                     PlanningSignalScraper,
 }
 
