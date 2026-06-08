@@ -1,14 +1,20 @@
+"""
+Auction House UK — regional auction houses with church listings.
+Covers: Auction House London, Midlands, Yorkshire, etc.
+"""
 import asyncio
 from bs4 import BeautifulSoup
 from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, classify, extract_price
 
-class SDLScraper(BaseScraper):
-    source_name = "SDL Auctions"
+class AuctionHouseScraper(BaseScraper):
+    source_name = "Auction House UK"
     source_type = "httpx"
     SEARCHES = [
-        "https://www.sdlauctions.co.uk/properties/for-sale/?search=church",
-        "https://www.sdlauctions.co.uk/properties/for-sale/?search=chapel",
-        "https://www.sdlauctions.co.uk/properties/for-sale/?search=place+of+worship",
+        "https://auctionhouse.co.uk/search?q=church",
+        "https://auctionhouse.co.uk/search?q=chapel",
+        "https://auctionhouse.co.uk/search?q=place+of+worship",
+        "https://auctionhouse.co.uk/search?q=former+church",
+        "https://auctionhouse.co.uk/search?q=gospel+hall",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
@@ -18,16 +24,15 @@ class SDLScraper(BaseScraper):
             try:
                 r = await client.get(url, timeout=15, follow_redirects=True)
                 if r.status_code != 200:
-                    self.logger.warning("SDL %s: %d", url, r.status_code)
                     continue
                 soup = BeautifulSoup(r.text, "lxml")
-                for card in soup.select("div[class*=property], article, li[class*=result]"):
+                for card in soup.select("div[class*=property], article, li[class*=lot]"):
                     link = card.select_one("a[href]")
                     if not link:
                         continue
                     href = link.get("href", "")
                     if not href.startswith("http"):
-                        href = "https://www.sdlauctions.co.uk" + href
+                        href = "https://auctionhouse.co.uk" + href
                     if href in seen:
                         continue
                     text = card.get_text(" ", strip=True)
@@ -46,7 +51,7 @@ class SDLScraper(BaseScraper):
                         listing_type="auction",
                     ))
             except Exception as e:
-                self.logger.warning("SDL %s: %s", url, e)
+                self.logger.warning("AuctionHouse %s: %s", url, e)
             await asyncio.sleep(1)
         self.log_result(len(results))
         return results

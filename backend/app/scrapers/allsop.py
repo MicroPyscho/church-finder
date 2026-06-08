@@ -5,39 +5,46 @@ from app.scrapers.base import BaseScraper, ScrapedListing, is_genuine_church, cl
 class AllsopScraper(BaseScraper):
     source_name = "Allsop Auctions"
     source_type = "httpx"
-    URLS = [
-        "https://www.allsop.co.uk/auctions/residential-auctions/",
-        "https://www.allsop.co.uk/auctions/commercial-auctions/",
+    SEARCHES = [
+        "https://www.allsop.co.uk/property-search/?type=commercial&kw=church",
+        "https://www.allsop.co.uk/property-search/?type=commercial&kw=chapel",
+        "https://www.allsop.co.uk/property-search/?type=residential&kw=chapel",
+        "https://www.allsop.co.uk/property-search/?type=residential&kw=church+conversion",
     ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
         results = []
-        for url in self.URLS:
+        seen = set()
+        for url in self.SEARCHES:
             try:
-                r = await client.get(url, timeout=20, follow_redirects=True)
-                r.raise_for_status()
+                r = await client.get(url, timeout=15, follow_redirects=True)
+                if r.status_code != 200:
+                    continue
                 soup = BeautifulSoup(r.text, "lxml")
-                for lot in soup.select("div.lot,article.lot,div[class*=lot],div[class*=property],li[class*=lot]"):
-                    text = lot.get_text(" ",strip=True)
-                    title_el = lot.select_one("h2,h3,[class*=title]")
+                for card in soup.select("article, div[class*=property], div[class*=lot], li[class*=property]"):
+                    link = card.select_one("a[href]")
+                    if not link:
+                        continue
+                    href = link.get("href", "")
+                    if not href.startswith("http"):
+                        href = "https://www.allsop.co.uk" + href
+                    if href in seen:
+                        continue
+                    text = card.get_text(" ", strip=True)
+                    if not is_genuine_church("", text):
+                        continue
+                    seen.add(href)
+                    title_el = card.select_one("h2, h3, [class*=title]")
                     title = title_el.get_text(strip=True) if title_el else text[:120]
-                    if not is_genuine_church(title, text): continue
-                    link = lot.select_one("a[href]")
-                    if not link: continue
-                    href = link.get("href","")
-                    if href.startswith("/"): href = "https://www.allsop.co.uk" + href
-                    price_el = lot.select_one("[class*=guide],[class*=price]")
-                    addr_el  = lot.select_one("[class*=address],[class*=location]")
                     results.append(self.make_listing(
                         url=href, title=title,
-                        price_raw=price_el.get_text(strip=True) if price_el else extract_price(text) or "TBC",
-                        location=addr_el.get_text(strip=True) if addr_el else "England",
-                        description=text[:400],
-                        property_type=classify(title),
+                        price_raw=extract_price(text) or "Enquire",
+                        location="England", description=text[:400],
+                        property_type=classify(text),
                         listing_type="auction",
                     ))
             except Exception as e:
-                self.logger.warning("Allsop %s failed: %s", url, e)
-            await asyncio.sleep(2)
+                self.logger.warning("Allsop %s: %s", url, e)
+            await asyncio.sleep(1)
         self.log_result(len(results))
         return results
