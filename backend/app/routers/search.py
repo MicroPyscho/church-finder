@@ -1,12 +1,9 @@
 """
-Search router — clean, simple, fast.
+Search router — simple, fast, clean.
 
-Flow:
-  1. Groq parses natural language query into structured intent (locations, price, keywords)
-  2. Standard Postgres query using those structured fields
-  3. Score and return results
-
-Groq never touches the database. It only translates language to structure.
+Groq: natural language → structured intent (price, location, keywords)
+DB:   ilike search across title + location + description
+No keyword filtering. No stopwords. The DB is already clean.
 """
 import json
 import logging
@@ -20,65 +17,43 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.models import Listing
 from app.services.groq_client import parse_search_intent
+from app.services.location_tiers import get_tiers, detect_location
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Church synonym expansion — used in DB query only
-# When user says "church", also search for chapel, worship etc in the DB
-# ---------------------------------------------------------------------------
-
+# Church synonyms — expand user terms to catch all related listings
 SYNONYMS = {
     "church":     ["church", "chapel", "ecclesiastical", "worship", "nave",
                    "vestry", "tabernacle", "minster", "priory", "abbey",
-                   "cathedral", "gospel hall", "meeting house", "religious"],
+                   "cathedral", "gospel hall", "meeting house"],
     "chapel":     ["chapel", "church", "methodist", "baptist", "wesleyan",
-                   "gospel hall", "meeting house", "tabernacle", "ecclesiastical"],
+                   "gospel hall", "meeting house", "tabernacle"],
     "worship":    ["worship", "church", "chapel", "ecclesiastical",
-                   "congregation", "parish", "religious", "place of worship"],
+                   "congregation", "parish"],
     "hall":       ["hall", "church hall", "community hall", "village hall",
-                   "assembly hall", "parish hall", "memorial hall", "gathering"],
-    "community":  ["community", "village hall", "church hall", "assembly hall",
-                   "gathering space", "meeting house"],
-    "methodist":  ["methodist", "wesleyan", "primitive methodist", "chapel"],
-    "baptist":    ["baptist", "chapel", "gospel hall"],
+                   "assembly hall", "parish hall", "memorial hall"],
     "cathedral":  ["cathedral", "minster", "church", "abbey", "priory"],
-    "religious":  ["church", "chapel", "worship", "ecclesiastical", "religious"],
+    "methodist":  ["methodist", "wesleyan", "chapel"],
+    "baptist":    ["baptist", "chapel", "gospel hall"],
+    "religious":  ["church", "chapel", "worship", "ecclesiastical"],
 }
 
-def expand_terms(keywords: list[str]) -> list[str]:
-    """Expand search keywords to include all synonyms."""
-    expanded = set()
-    for kw in keywords:
-        kl = kw.lower()
-        if kl in SYNONYMS:
-            expanded.update(SYNONYMS[kl])
-        else:
-            expanded.add(kl)
-    return list(expanded)
+def expand(words: list[str]) -> list[str]:
+    out = set()
+    for w in words:
+        out.update(SYNONYMS.get(w, [w]))
+    return list(out)
 
-
-# ---------------------------------------------------------------------------
-# Price extraction from DB string values
-# ---------------------------------------------------------------------------
-
-def extract_price(price_str: str) -> int | None:
-    """Extract integer from strings like '£125,000' or '£100k-£200k'."""
-    if not price_str:
+def extract_price(s: str) -> int | None:
+    if not s:
         return None
-    m = re.search(r"£([\d,]+)\s*[kK]?", price_str)
+    m = re.search(r"£([\d,]+)\s*[kK]?", s)
     if not m:
         return None
-    val = int(m.group(1).replace(",", ""))
-    if "k" in m.group(0).lower():
-        val *= 1000
-    return val
+    v = int(m.group(1).replace(",", ""))
+    return v * 1000 if "k" in m.group(0).lower() else v
 
-
-# ---------------------------------------------------------------------------
-# Search endpoint
-# ---------------------------------------------------------------------------
 
 class SearchRequest(BaseModel):
     query:    str
@@ -90,112 +65,95 @@ class SearchRequest(BaseModel):
 @router.post("")
 async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
 
-    # ── Step 1: Parse intent with Groq ────────────────────────────────────
-    # Groq translates natural language → structured fields.
-    # This is its ONLY job. It never sees the database.
+    # Step 1 — Groq parses natural language into structured intent
     intent = await parse_search_intent(req.query)
 
-    # ── Step 2: Build DB query from structured intent ─────────────────────
+    # Step 2 — Build DB query
     q = select(Listing).where(Listing.is_active == True)
 
-    # Location filter — Groq expands "near London" to surrounding counties
-    locations = intent.get("locations", [])
-    if locations:
-        q = q.where(or_(
-            *[Listing.location.ilike(f"%{loc}%") for loc in locations]
-        ))
+    # ── Tiered location search ───────────────────────────────────────────
+    # Tier 1: exact area terms (100% match)
+    # Tier 2: neighbouring areas (85% match)
+    # Tier 3: wider region (70% match)
+    # No location filter = return all listings
+    tiers = get_tiers(req.query)
+    location_key = detect_location(req.query)
+    intent["locations"] = [location_key.title()] if location_key else []
 
-    # Keyword filter — expand synonyms so "church" finds chapel/worship etc
-    # Extract meaningful words from the query directly (not from intent keywords)
-    query_words = [
-        w.lower() for w in re.findall(r"[a-zA-Z]+", req.query)
-        if w.lower() not in {
-            "a","an","the","and","or","for","in","on","at","to","of","with",
-            "near","around","by","is","are","i","me","my","we","looking",
-            "want","need","find","search","some","any","about","please",
-            "within","hours","drive","from","under","above","below","between",
-            "affordable","cheap","large","small","old","former","available",
-        }
-        and len(w) > 3
-    ]
+    if tiers:
+        exact_terms = tiers.get("exact", [])
+        near_terms  = tiers.get("near", [])
+        all_terms   = list(dict.fromkeys(exact_terms + near_terms))
+        # Limit to 30 terms max to avoid PostgreSQL bind parameter limits
+        # Prioritise: short postcode prefixes (most useful) over long place names
+        short = [t for t in all_terms if len(t) <= 4][:20]
+        long  = [t for t in all_terms if len(t) > 4][:10]
+        use_terms = list(dict.fromkeys(short + long))
+        if use_terms:
+            q = q.where(or_(
+                *[Listing.location.ilike(f"%{t}%") for t in use_terms]
+            ))
 
-    # Expand synonyms
-    search_terms = expand_terms(query_words)
+    # Keywords: take every meaningful word from the query,
+    # expand synonyms, search title + description + location.
+    # No stopwords. No restrictions. DB is already clean.
+    words = [w.lower() for w in re.findall(r"[a-zA-Z]{3,}", req.query)]
+    # Only skip pure connectives
+    skip = {"the","and","for","with","from","that","this","have",
+            "been","they","near","about","within","under","above",
+            "between","looking","want","find","some","any"}
+    words = [w for w in words if w not in skip]
 
-    # Only apply keyword filter if we have meaningful non-generic terms
-    generic = {"church","chapel","worship","religious","building","property",
-               "space","place","gathering","hall","ecclesiastical"}
-    specific_terms = [t for t in search_terms if t not in generic]
-
-    if specific_terms:
-        # Has specific terms (e.g. "methodist", "yorkshire", "conversion")
+    if words:
+        terms = expand(words)[:12]
         q = q.where(or_(*[
             or_(
                 Listing.title.ilike(f"%{t}%"),
                 Listing.description.ilike(f"%{t}%"),
+                Listing.location.ilike(f"%{t}%"),
             )
-            for t in specific_terms[:8]
-        ]))
-    else:
-        # Generic query like "church" or "place of worship" — return everything
-        # but still search for ANY church synonym to exclude non-church listings
-        all_synonyms = list(set(
-            term for terms in SYNONYMS.values() for term in terms
-        ))
-        q = q.where(or_(*[
-            or_(
-                Listing.title.ilike(f"%{t}%"),
-                Listing.description.ilike(f"%{t}%"),
-                Listing.source.ilike(f"%{t}%"),
-            )
-            for t in all_synonyms[:15]
+            for t in terms
         ]))
 
-    # ── Step 3: Count and paginate ────────────────────────────────────────
+    # Step 3 — Count and paginate
     total = (await db.execute(
         select(func.count()).select_from(q.subquery())
     )).scalar_one()
 
-    q = q.order_by(Listing.first_seen.desc())
-    q = q.offset((req.page - 1) * req.per_page).limit(req.per_page)
-    rows = (await db.execute(q)).scalars().all()
+    rows = (await db.execute(
+        q.order_by(Listing.first_seen.desc())
+         .offset((req.page - 1) * req.per_page)
+         .limit(req.per_page)
+    )).scalars().all()
 
-    # ── Step 4: Score results ─────────────────────────────────────────────
+    # Step 4 — Score with price filter
     price_min = intent.get("price_min") or 0
     price_max = intent.get("price_max")
 
     results = []
     for listing in rows:
-        # Price range filter
         lp = extract_price(listing.price or "")
         if lp is not None:
             if price_max and lp > price_max * 1.1:
                 continue
             if price_min and lp < price_min * 0.9:
                 continue
-
-        criteria = _build_criteria(listing, intent)
-        score    = _compute_score(criteria, listing)
-        results.append(_to_dict(listing, score, criteria))
+        criteria = _criteria(listing, intent, location_key)
+        results.append(_to_dict(listing, _score(criteria, listing), criteria))
 
     results.sort(key=lambda x: x["_score"], reverse=True)
-    total = len(results)
 
     return {
-        "intent":              intent,
-        "results":             results,
-        "total":               total,
-        "pages":               max(1, (total + req.per_page - 1) // req.per_page),
-        "page":                req.page,
-        "per_page":            req.per_page,
-        "is_relevant_query":   True,
-        "follow_up_questions": _format_follow_up(intent),
+        "intent":             intent,
+        "results":            results,
+        "total":              len(results),
+        "pages":              max(1, (total + req.per_page - 1) // req.per_page),
+        "page":               req.page,
+        "per_page":           req.per_page,
+        "is_relevant_query":  True,
+        "follow_up_questions": _follow_up(intent),
     }
 
-
-# ---------------------------------------------------------------------------
-# Property analysis stream
-# ---------------------------------------------------------------------------
 
 @router.get("/stream-analysis/{property_id}")
 async def stream_analysis(property_id: str, db: AsyncSession = Depends(get_db)):
@@ -222,82 +180,62 @@ async def stream_analysis(property_id: str, db: AsyncSession = Depends(get_db)):
     return StreamingResponse(generate(), media_type="text/plain")
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+# ── Helpers ────────────────────────────────────────────────────────────────
 
-def _format_follow_up(intent: dict) -> list:
-    """Convert Groq follow-up questions to structured options."""
+def _follow_up(intent: dict) -> list:
     result = []
-    for i, q in enumerate(intent.get("follow_up_questions", [])[:2]):
-        if not q or not isinstance(q, str):
+    for i, q in enumerate((intent.get("follow_up_questions") or [])[:2]):
+        if not q:
             continue
-        q_lower = q.lower()
-        if any(w in q_lower for w in ["budget","price","cost","£"]):
-            options = ["Under £100k","£100k–£250k","£250k–£500k","£500k+","Flexible"]
-        elif any(w in q_lower for w in ["where","location","area","region","county"]):
-            options = ["London","South East","South West","Midlands","North England","Wales","Scotland","Nationwide"]
-        elif any(w in q_lower for w in ["use","purpose","intend","plan","convert"]):
-            options = ["Active worship","Community use","Residential conversion","Commercial","Investment"]
-        elif any(w in q_lower for w in ["size","capacity","large","small"]):
-            options = ["Small","Medium","Large","Very large","Flexible"]
-        elif any(w in q_lower for w in ["denomination","type","methodist","baptist"]):
-            options = ["Any","Methodist","Baptist","Anglican","Catholic","Non-denominational"]
+        ql = q.lower()
+        if any(w in ql for w in ["budget","price","cost","£"]):
+            opts = ["Under £100k","£100k–£250k","£250k–£500k","£500k+","Flexible"]
+        elif any(w in ql for w in ["where","location","area","region"]):
+            opts = ["London","South East","Midlands","North England","Wales","Scotland","Nationwide"]
+        elif any(w in ql for w in ["use","purpose","convert","plan"]):
+            opts = ["Active worship","Community use","Conversion","Investment"]
+        elif any(w in ql for w in ["denomination","type","methodist","baptist"]):
+            opts = ["Any","Methodist","Baptist","Anglican","Catholic"]
         else:
-            options = ["Yes","No","Not sure"]
-        result.append({"id": f"q{i}", "question": q, "options": options})
+            opts = ["Yes","No","Not sure"]
+        result.append({"id": f"q{i}", "question": q, "options": opts})
     return result
 
 
-def _build_criteria(listing: Listing, intent: dict) -> list:
-    criteria = []
-    price_val = extract_price(listing.price or "")
-    price_max = intent.get("price_max")
-    price_min = intent.get("price_min") or 0
-
-    if price_val and (price_max or price_min):
-        in_range = (
-            (not price_max or price_val <= price_max) and
-            (not price_min or price_val >= price_min)
-        )
-        label = f"£{price_min//1000}k–£{price_max//1000}k" if price_min and price_max else \
-                f"Under £{price_max//1000}k" if price_max else \
-                f"Over £{price_min//1000}k"
-        criteria.append({
-            "label": label,
-            "status": "exact" if in_range else "miss",
-            "detail": listing.price,
-        })
-
-    if intent.get("locations"):
+def _criteria(listing: Listing, intent: dict, location_key: str = None) -> list:
+    out = []
+    lp = extract_price(listing.price or "")
+    pm = intent.get("price_max")
+    pn = intent.get("price_min") or 0
+    if lp and (pm or pn):
+        in_range = (not pm or lp <= pm) and (not pn or lp >= pn)
+        label = f"Under £{pm//1000}k" if pm and not pn else \
+                f"Over £{pn//1000}k" if pn and not pm else \
+                f"£{pn//1000}k–£{pm//1000}k"
+        out.append({"label": label,
+                    "status": "exact" if in_range else "miss",
+                    "detail": listing.price})
+    if intent.get("locations") and location_key:
         loc = (listing.location or "").lower()
-        hit = any(l.lower() in loc for l in intent["locations"])
-        criteria.append({
-            "label": intent["locations"][0],
-            "status": "exact" if hit else "miss",
-        })
+        tier_data = get_tiers(location_key) or {}
+        exact_t = [t.lower() for t in tier_data.get("exact", [])]
+        near_t  = [t.lower() for t in tier_data.get("near", [])]
+        is_exact = any(t in loc for t in exact_t)
+        is_near  = any(t in loc for t in near_t)
+        status = "exact" if is_exact else "close" if is_near else "miss"
+        out.append({"label": intent["locations"][0],
+                    "status": status})
+    return out
 
-    return criteria
 
-
-def _compute_score(criteria: list, listing: Listing) -> int:
+def _score(criteria: list, listing: Listing) -> int:
     if not criteria:
-        return {
-            "Alex Martin Commercial": 95,
-            "Church of England": 90,
-            "SW Property": 90,
-            "Church Growth Trust": 88,
-            "Churches Conservation Trust": 85,
-            "Clive Emson Auctions": 83,
-            "BTG Eddisons Auctions": 82,
-        }.get(listing.source, 75)
-
+        return {"Alex Martin Commercial": 95, "Church of England": 90,
+                "SW Property": 90, "Church Growth Trust": 88,
+                "Churches Conservation Trust": 85}.get(listing.source, 75)
     exact = sum(1 for c in criteria if c["status"] == "exact")
-    raw   = round((exact / len(criteria)) * 100)
-    if raw >= 90: return 100
-    if raw >= 70: return 85
-    if raw >= 50: return 70
-    return 50
+    raw = round((exact / len(criteria)) * 100)
+    return 100 if raw >= 90 else 85 if raw >= 70 else 70 if raw >= 50 else 50
 
 
 def _to_dict(listing: Listing, score: int, criteria: list) -> dict:
@@ -307,21 +245,14 @@ def _to_dict(listing: Listing, score: int, criteria: list) -> dict:
     except Exception:
         pass
     return {
-        "id":            listing.id,
-        "source":        listing.source,
-        "source_url":    listing.url,
-        "title":         listing.title,
-        "price_raw":     listing.price,
-        "price":         listing.price,
-        "location":      listing.location,
-        "description":   listing.description,
-        "images":        images,
-        "image_url":     images[0] if images else None,
-        "listing_type":  "sale",
-        "is_off_market": listing.is_off_market,
-        "first_seen":    listing.first_seen.isoformat(),
-        "last_seen":     listing.last_seen.isoformat(),
-        "is_active":     listing.is_active,
-        "_score":        score,
-        "_criteria":     criteria,
+        "id": listing.id, "source": listing.source,
+        "source_url": listing.url, "title": listing.title,
+        "price_raw": listing.price, "price": listing.price,
+        "location": listing.location, "description": listing.description,
+        "images": images, "image_url": images[0] if images else None,
+        "listing_type": "sale", "is_off_market": listing.is_off_market,
+        "first_seen": listing.first_seen.isoformat(),
+        "last_seen": listing.last_seen.isoformat(),
+        "is_active": listing.is_active,
+        "_score": score, "_criteria": criteria,
     }

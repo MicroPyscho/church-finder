@@ -28,51 +28,103 @@ async def chat(messages, temperature=0.7, max_tokens=1000, json_mode=False) -> s
         return r.json()["choices"][0]["message"]["content"]
 
 async def parse_search_intent(query: str) -> dict:
-    system = """You are a UK property search assistant specialising in churches and chapels.
-Parse the user query and return ONLY valid JSON.
+    """
+    Parse search intent.
+    Groq handles: price, denomination, use_case, follow_up_questions.
+    Location extracted deterministically to avoid hallucination.
+    """
+    import re as _re
 
-CRITICAL RULES:
-1. LOCATION EXPANSION: Always expand locations to nearby counties.
-   - "London" or "near London" or "from London" = ["London","Kent","Surrey","Essex","Hertfordshire","Berkshire","Oxfordshire","Hampshire","Buckinghamshire","Middlesex"]
-   - "2 hours from London" = same as above plus ["Wiltshire","Dorset","Suffolk","Norfolk","Leicestershire"]
-   - "Yorkshire" = ["Yorkshire","North Yorkshire","South Yorkshire","West Yorkshire","East Yorkshire","Leeds","Sheffield","Bradford","Hull"]
-   - "Midlands" = ["Warwickshire","Staffordshire","Leicestershire","Nottinghamshire","Derbyshire","Worcestershire","West Midlands","East Midlands"]
-   - "North" or "North England" = ["Lancashire","Yorkshire","Cumbria","Durham","Northumberland","Cheshire","Merseyside","Tyne and Wear"]
-   - "South" = ["Kent","Surrey","Sussex","Hampshire","Dorset","Wiltshire","Somerset","Devon","Cornwall"]
-   - Always include the named place AND its surrounding region.
+    # Deterministic location extraction — reliable, instant, no hallucination
+    # Search terms for each region — includes postcode prefixes AND place names
+    # because DB stores locations as "Hackney, E8" or "Swanscombe - Kent"
+    UK_PLACES = {
+        "london":          ["London","E","EC","N","NW","SE","SW","W","WC",
+                            "IG","RM","DA","BR","CR","SM","KT","TW","UB","HA","EN","WD",
+                            "Hackney","Croydon","Greenwich","Woolwich","Bromley",
+                            "Clerkenwell","Hammersmith","Fulham","Barkingside","Chingford",
+                            "Sidcup","Dartford","Wandsworth","Islington","Lambeth",
+                            "Southwark","Tower Hamlets","Newham","Waltham"],
+        "kent":            ["Kent","CT","ME","TN","DA","Swanscombe","Dartford",
+                            "Maidstone","Canterbury","Rochester","Chatham","Gravesend"],
+        "yorkshire":       ["Yorkshire","BD","DN","HD","HG","HX","HU","LS","S","WF","YO",
+                            "Barnsley","Leeds","Sheffield","Bradford","Hull","York",
+                            "Harrogate","Wakefield","Doncaster","Huddersfield","Halifax"],
+        "surrey":          ["Surrey","GU","KT","RH","SM","CR","TW","Guildford","Woking"],
+        "essex":           ["Essex","CM","CO","IG","RM","SS","Chelmsford","Colchester"],
+        "sussex":          ["Sussex","BN","RH","TN","Brighton","Eastbourne","Worthing"],
+        "hampshire":       ["Hampshire","PO","SO","GU","Southampton","Portsmouth"],
+        "lancashire":      ["Lancashire","BB","FY","LA","PR","Blackpool","Preston","Burnley"],
+        "manchester":      ["Manchester","M","SK","BL","OL","WN","Salford","Stockport"],
+        "midlands":        ["Midlands","B","CV","DY","WS","WV","LE","NG","DE",
+                            "Birmingham","Coventry","Leicester","Nottingham","Derby"],
+        "wales":           ["Wales","CF","LD","LL","NP","SA","SY",
+                            "Cardiff","Swansea","Newport","Wrexham"],
+        "scotland":        ["Scotland","AB","DD","EH","FK","G","KA","KY","ML","PA","PH",
+                            "Edinburgh","Glasgow","Aberdeen","Dundee"],
+        "devon":           ["Devon","EX","PL","TQ","Exeter","Plymouth","Torquay"],
+        "cornwall":        ["Cornwall","PL","TR","Truro","Penzance","Falmouth"],
+        "norfolk":         ["Norfolk","NR","Norwich"],
+        "suffolk":         ["Suffolk","CO","IP","Ipswich"],
+        "oxfordshire":     ["Oxfordshire","OX","Oxford"],
+        "berkshire":       ["Berkshire","RG","SL","Reading","Windsor"],
+        "hertfordshire":   ["Hertfordshire","AL","EN","HP","SG","WD","Watford","St Albans"],
+        "cambridgeshire":  ["Cambridgeshire","CB","PE","Cambridge","Peterborough"],
+        "lincolnshire":    ["Lincolnshire","LN","DN","Lincoln","Grimsby"],
+        "derbyshire":      ["Derbyshire","DE","S","Derby","Chesterfield"],
+        "nottinghamshire": ["Nottinghamshire","NG","Nottingham","Newark"],
+        "staffordshire":   ["Staffordshire","ST","WS","Stoke","Stafford"],
+        "shropshire":      ["Shropshire","SY","TF","Shrewsbury","Telford"],
+        "worcestershire":  ["Worcestershire","WR","DY","Worcester"],
+        "warwickshire":    ["Warwickshire","CV","Warwick","Stratford"],
+        "northamptonshire":["Northamptonshire","NN","Northampton"],
+        "cheshire":        ["Cheshire","CH","CW","SK","WA","Chester","Crewe"],
+        "cumbria":         ["Cumbria","CA","LA","Carlisle","Kendal"],
+        "durham":          ["Durham","DH","DL","SR","Sunderland","Hartlepool","Stockton"],
+        "northumberland":  ["Northumberland","NE","Newcastle","Gateshead"],
+        "dorset":          ["Dorset","BH","DT","Bournemouth","Poole","Weymouth"],
+        "wiltshire":       ["Wiltshire","BA","SN","SP","Salisbury","Swindon"],
+        "gloucestershire": ["Gloucestershire","GL","Gloucester","Cheltenham"],
+        "somerset":        ["Somerset","BA","BS","TA","Bath","Taunton","Wells"],
+    }
 
-2. PRICE PARSING: Extract numbers from any price expression.
-   - "250k and below" = price_max: 250000
-   - "between 10k and 50k" = price_min: 10000, price_max: 50000
-   - "above 30k" = price_min: 30000
-   - "quarter million" = price_max: 250000
-   - "half a million" = price_max: 500000
+    q_lower = query.lower()
+    q_words = set(_re.findall(r"[a-z]+", q_lower))
 
-3. follow_up_questions: 1-2 questions SPECIFIC to this query. Never generic.
+    locations = []
+    for place, expansions in UK_PLACES.items():
+        if place in q_words or place in q_lower:
+            locations.extend(expansions)
+            break  # only expand the first match to avoid over-expanding
 
-Return ONLY valid JSON:
+    # Groq for everything else
+    system = """Parse this UK church property search query. Return ONLY JSON:
 {
-  "locations": [],
   "price_max": null,
   "price_min": null,
-  "features": [],
-  "property_type": null,
+  "denomination": null,
   "use_case": null,
   "listing_type": null,
-  "denomination": null,
   "follow_up_questions": []
 }
-follow_up_questions must be 1-2 questions directly relevant to what the user said.
-Never ask generic questions. Always relate to their specific query."""
+Price rules: "under 200k"->price_max:200000, "above 30k"->price_min:30000,
+"between 10k and 50k"->price_min:10000,price_max:50000
+follow_up_questions: 1-2 questions specific to this query. Never generic."""
+
     try:
         result = await chat(
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": query}],
-            temperature=0.3, max_tokens=500, json_mode=True,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": query},
+            ],
+            temperature=0.1, max_tokens=200, json_mode=True,
         )
-        return json.loads(result)
+        data = json.loads(result)
+        data["locations"] = locations
+        return data
     except Exception as e:
         logger.warning("Groq intent parse failed: %s", e)
-        return {"follow_up_questions": []}
+        return {"locations": locations, "follow_up_questions": []}
 
 async def generate_enquiry(property_data: dict, user_intent: dict = None, user_description: str = None) -> str:
     title    = property_data.get("title", "the property")
