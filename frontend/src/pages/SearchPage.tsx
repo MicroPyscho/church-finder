@@ -195,7 +195,7 @@ export default function SearchPage() {
             <button
               className="btn-search"
               onClick={() => search()}
-              disabled={mut.isPending || !q.trim()}
+              disabled={!q.trim()}
               type="button"
             >
               {mut.isPending
