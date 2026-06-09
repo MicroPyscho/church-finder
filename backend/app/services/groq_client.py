@@ -98,17 +98,29 @@ async def parse_search_intent(query: str) -> dict:
             break  # only expand the first match to avoid over-expanding
 
     # Groq for everything else
-    system = """Parse this UK church property search query. Return ONLY JSON:
+    system = """Parse this UK church property search query. Return ONLY valid JSON:
 {
   "price_max": null,
   "price_min": null,
   "denomination": null,
   "use_case": null,
   "listing_type": null,
+  "features": [],
+  "size_min_sqft": null,
+  "size_max_sqft": null,
   "follow_up_questions": []
 }
-Price rules: "under 200k"->price_max:200000, "above 30k"->price_min:30000,
-"between 10k and 50k"->price_min:10000,price_max:50000
+Price: "under 200k"->price_max:200000, "above 30k"->price_min:30000, "between 10k and 50k"->price_min:10000,price_max:50000
+Features - extract these exact terms when mentioned:
+  parking/car park/garage -> "parking"
+  graveyard/cemetery/churchyard -> "graveyard"
+  hall/meeting room/function room -> "hall"
+  spire/tower/steeple -> "spire"
+  listed/grade I/grade II -> "listed"
+  garden/grounds/courtyard -> "garden"
+  kitchen/catering -> "kitchen"
+  disabled access/wheelchair -> "disabled"
+Size: "1000 sqft"->size_min_sqft:1000, "large" (>3000sqft)->size_min_sqft:3000, "small" (<1000sqft)->size_max_sqft:1000
 follow_up_questions: 1-2 questions specific to this query. Never generic."""
 
     try:
