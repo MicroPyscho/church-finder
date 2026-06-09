@@ -34,6 +34,26 @@ export default function SearchPage() {
   const [focused,      setFocused]      = useState(false);
   const [expanded,     setExpanded]     = useState(false);
 
+  // ── Button state machine ─────────────────────────────────────────────
+  // Derives what the search button should show based on current context.
+  // No AI needed — pure UI state logic.
+  type ButtonState = "idle" | "typing" | "recording" | "searching" | "follow_up"
+  const buttonState: ButtonState =
+    recording        ? "recording"  :
+    mut.isPending    ? "searching"  :
+    showFollowUp     ? "follow_up"  :
+    q.trim()         ? "typing"     :
+    "idle"
+
+  const BUTTON_CONFIG: Record<ButtonState, { label: string; icon: string; hint: string }> = {
+    idle:       { label: "Search",     icon: "search",   hint: "Type or speak your query" },
+    typing:     { label: "Search",     icon: "search",   hint: "Press Enter or click Search" },
+    recording:  { label: "Stop",       icon: "stop",     hint: "Tap to stop recording" },
+    searching:  { label: "Searching",  icon: "spinner",  hint: "Finding properties..." },
+    follow_up:  { label: "Continue",   icon: "arrow",    hint: "Answer above to refine results" },
+  }
+  const btn = BUTTON_CONFIG[buttonState]
+
   // Auto-resize textarea
   useEffect(() => {
     if (inputRef.current) {
@@ -192,17 +212,27 @@ export default function SearchPage() {
               }
             </button>
 
-            {/* Search button — always enabled if there's text */}
+            {/* Context-aware search button */}
             <button
-              className="btn-search"
-              onClick={() => search()}
-              disabled={!q.trim()}
+              className={`btn-search btn-search--${buttonState}`}
+              onClick={() => {
+                if (buttonState === "recording") {
+                  recognitionRef.current?.stop()
+                } else if (buttonState === "follow_up") {
+                  navigate("/results")
+                } else {
+                  search()
+                }
+              }}
+              disabled={buttonState === "searching" || buttonState === "idle"}
+              title={btn.hint}
               type="button"
             >
-              {mut.isPending
-                ? <span className="spin" style={{ fontSize: "1rem" }}>◌</span>
-                : <><Search size={13} /> Search</>
-              }
+              {buttonState === "searching" && <span className="spin">◌</span>}
+              {buttonState === "recording" && <MicOff size={13} />}
+              {buttonState === "follow_up" && <span>→</span>}
+              {(buttonState === "idle" || buttonState === "typing") && <Search size={13} />}
+              {" "}{btn.label}
             </button>
           </div>
         </div>

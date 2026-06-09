@@ -1048,3 +1048,10 @@ html, body, #root {
   background: rgba(229,62,62,0.08);
   border-radius: 50%;
 }
+
+/* ── Context-aware search button states ── */
+.btn-search--idle       { opacity: 0.6; }
+.btn-search--typing     { background: var(--ink); color: #fff; }
+.btn-search--recording  { background: #e53e3e; color: #fff; }
+.btn-search--searching  { background: var(--mid); color: #fff; cursor: wait; }
+.btn-search--follow_up  { background: var(--green, #2d7a4f); color: #fff; }
