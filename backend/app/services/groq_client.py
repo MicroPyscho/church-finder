@@ -5,6 +5,10 @@ import os, json, logging, httpx
 
 logger = logging.getLogger(__name__)
 
+# Simple in-memory cache for intent parsing
+# Avoids calling Groq twice for the same query
+_intent_cache: dict[str, dict] = {}
+
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "llama-3.3-70b-versatile"
 
@@ -28,6 +32,22 @@ async def chat(messages, temperature=0.7, max_tokens=1000, json_mode=False) -> s
         return r.json()["choices"][0]["message"]["content"]
 
 async def parse_search_intent(query: str) -> dict:
+    # Return cached result if same query seen before
+    cache_key = query.lower().strip()
+    if cache_key in _intent_cache:
+        logger.debug("Intent cache hit: %s", cache_key[:40])
+        return _intent_cache[cache_key]
+
+    # Skip Groq for single generic words — no LLM needed
+    GENERIC = {"church","churches","chapel","chapels","worship",
+               "religious","ecclesiastical","hall","halls"}
+    if cache_key in GENERIC:
+        result = {"locations":[],"features":[],"price_max":None,
+                  "price_min":None,"size_min_sqft":None,"size_max_sqft":None,
+                  "denomination":None,"use_case":None,"listing_type":None,
+                  "follow_up_questions":[]}
+        _intent_cache[cache_key] = result
+        return result
     """
     Parse search intent.
     Groq handles: price, denomination, use_case, follow_up_questions.
@@ -133,14 +153,17 @@ follow_up_questions: 1-2 questions specific to this query. Never generic."""
         )
         data = json.loads(result)
         data["locations"] = locations
-        # Ensure size fields exist
         data.setdefault("size_min_sqft", None)
         data.setdefault("size_max_sqft", None)
         data.setdefault("features", [])
+        # Cache for this session
+        _intent_cache[cache_key] = data
         return data
     except Exception as e:
         logger.warning("Groq intent parse failed: %s", e)
-        return {"locations": locations, "follow_up_questions": []}
+        result = {"locations": locations, "follow_up_questions": []}
+        _intent_cache[cache_key] = result
+        return result
 
 async def generate_enquiry(property_data: dict, user_intent: dict = None, user_description: str = None) -> str:
     title    = property_data.get("title", "the property")
