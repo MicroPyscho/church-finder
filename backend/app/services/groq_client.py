@@ -29,7 +29,28 @@ async def chat(messages, temperature=0.7, max_tokens=1000, json_mode=False) -> s
 
 async def parse_search_intent(query: str) -> dict:
     system = """You are a UK property search assistant specialising in churches and chapels.
-Parse the user query and return ONLY valid JSON:
+Parse the user query and return ONLY valid JSON.
+
+CRITICAL RULES:
+1. LOCATION EXPANSION: Always expand locations to nearby counties.
+   - "London" or "near London" or "from London" = ["London","Kent","Surrey","Essex","Hertfordshire","Berkshire","Oxfordshire","Hampshire","Buckinghamshire","Middlesex"]
+   - "2 hours from London" = same as above plus ["Wiltshire","Dorset","Suffolk","Norfolk","Leicestershire"]
+   - "Yorkshire" = ["Yorkshire","North Yorkshire","South Yorkshire","West Yorkshire","East Yorkshire","Leeds","Sheffield","Bradford","Hull"]
+   - "Midlands" = ["Warwickshire","Staffordshire","Leicestershire","Nottinghamshire","Derbyshire","Worcestershire","West Midlands","East Midlands"]
+   - "North" or "North England" = ["Lancashire","Yorkshire","Cumbria","Durham","Northumberland","Cheshire","Merseyside","Tyne and Wear"]
+   - "South" = ["Kent","Surrey","Sussex","Hampshire","Dorset","Wiltshire","Somerset","Devon","Cornwall"]
+   - Always include the named place AND its surrounding region.
+
+2. PRICE PARSING: Extract numbers from any price expression.
+   - "250k and below" = price_max: 250000
+   - "between 10k and 50k" = price_min: 10000, price_max: 50000
+   - "above 30k" = price_min: 30000
+   - "quarter million" = price_max: 250000
+   - "half a million" = price_max: 500000
+
+3. follow_up_questions: 1-2 questions SPECIFIC to this query. Never generic.
+
+Return ONLY valid JSON:
 {
   "locations": [],
   "price_max": null,
