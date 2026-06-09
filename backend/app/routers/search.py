@@ -224,44 +224,75 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
             "follow_up_questions": [],
         }
 
-    # Base query
+    # ── Base query ──────────────────────────────────────────────
     q = select(Listing).where(Listing.is_active == True)
 
-    # Location filter
-    if intent["locations"]:
+    # ── Location filter ──────────────────────────────────────────
+    # Groq expands "2 hours from London" to all surrounding counties
+    if intent.get("locations"):
         q = q.where(or_(
             *[Listing.location.ilike(f"%{loc}%") for loc in intent["locations"]]
         ))
 
-    # Specific keyword filter
+    # ── Denomination / property type filter ──────────────────────
+    if intent.get("denomination"):
+        q = q.where(or_(
+            Listing.title.ilike(f"%{intent['denomination']}%"),
+            Listing.description.ilike(f"%{intent['denomination']}%"),
+        ))
+
+    # ── Specific keyword filter ───────────────────────────────────
+    skip_words = CHURCH_KEYWORDS | LOCATION_WORDS | {
+        "affordable","cheap","large","small","historic","old",
+        "former","available","listed","heritage","looking","want",
+        "need","find","search","around","within","drive","hours",
+        "about","below","above","between","pounds","sale","buy",
+    }
     specific_keywords = [
         kw for kw in intent.get("keywords", [])
-        if kw not in CHURCH_KEYWORDS and kw not in LOCATION_WORDS
-        and kw not in {"affordable","cheap","large","small","historic","old",
-                       "former","available","listed","heritage"}
+        if kw not in skip_words and len(kw) > 3
     ]
     if specific_keywords:
         q = q.where(or_(*[
             or_(Listing.title.ilike(f"%{kw}%"), Listing.description.ilike(f"%{kw}%"))
-            for kw in specific_keywords[:4]
+            for kw in specific_keywords[:3]
         ]))
 
-    # Count
+    # ── Count total (before price filter — price is in string form) ──
     total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
 
-    # Paginate
+    # ── Paginate ──────────────────────────────────────────────────
     q = q.order_by(Listing.first_seen.desc())
     q = q.offset((req.page - 1) * req.per_page).limit(req.per_page)
     rows = (await db.execute(q)).scalars().all()
 
-    # Score
+    # ── Score and price filter ───────────────────────────────────
+    # Price stored as string "£125,000" — extract and compare
+    price_min = intent.get("price_min") or 0
+    price_max = intent.get("price_max")
+
     results = []
     for listing in rows:
+        # Extract numeric price from listing
+        listing_price = _extract_price_value(listing.price or "")
+
+        # Apply price range filter
+        if listing_price is not None:
+            if price_max and listing_price > price_max * 1.05:
+                continue  # over budget (5% tolerance)
+            if price_min and listing_price < price_min * 0.95:
+                continue  # under minimum (5% tolerance)
+
         criteria = _build_criteria(listing, intent)
         score    = _compute_score(criteria, listing, intent)
         results.append(_to_dict(listing, score, criteria))
 
     results.sort(key=lambda x: x["_score"], reverse=True)
+
+    # Recalculate total after price filtering
+    total = len(results)
+    start = 0  # already paginated above
+    results = results  # all results scored
 
     return {
         "intent":               intent,
@@ -334,18 +365,41 @@ Write the property analysis."""
 # Helpers
 # ---------------------------------------------------------------------------
 
+
+def _extract_price_value(price_str: str) -> int | None:
+    """Extract integer price from strings like £125,000 or £100k-£200k."""
+    if not price_str:
+        return None
+    # Take first price found
+    m = re.search(r"£([\d,]+)\s*[kK]?", price_str)
+    if not m:
+        return None
+    val = int(m.group(1).replace(",", ""))
+    if "k" in m.group(0).lower():
+        val *= 1000
+    return val
+
+
 def _build_criteria(listing: Listing, intent: dict) -> list:
     criteria = []
-    if intent.get("price_max"):
-        m = re.search(r'£([\d,]+)', listing.price or "")
-        if m:
-            val = int(m.group(1).replace(",", ""))
-            if val <= intent["price_max"]:
-                criteria.append({"label": f"Under £{intent['price_max']//1000}k", "status": "exact", "detail": listing.price})
-            elif val <= intent["price_max"] * 1.2:
-                criteria.append({"label": f"Near £{intent['price_max']//1000}k", "status": "close", "detail": listing.price})
-            else:
-                criteria.append({"label": f"Over £{intent['price_max']//1000}k", "status": "miss", "detail": listing.price})
+    price_val = _extract_price_value(listing.price or "")
+    price_max = intent.get("price_max")
+    price_min = intent.get("price_min") or 0
+
+    if price_val is not None and (price_max or price_min):
+        in_range = True
+        label_parts = []
+        if price_max:
+            label_parts.append(f"Under £{price_max//1000}k")
+            if price_val > price_max * 1.2:
+                in_range = False
+        if price_min:
+            label_parts.append(f"Over £{price_min//1000}k")
+            if price_val < price_min * 0.8:
+                in_range = False
+        label = " & ".join(label_parts) or "In budget"
+        status = "exact" if in_range else ("close" if price_val <= (price_max or float("inf")) * 1.2 else "miss")
+        criteria.append({"label": label, "status": status, "detail": listing.price})
     if intent.get("locations"):
         loc = (listing.location or "").lower()
         hit = any(l.lower() in loc for l in intent["locations"])
