@@ -28,3 +28,4 @@ anyio==4.4.0
 # Code quality
 ruff==0.4.7
 mypy==1.10.0
+apscheduler==3.10.4
