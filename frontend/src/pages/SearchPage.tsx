@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Search, Mic, MicOff } from "lucide-react";
+import { Search, Mic, MicOff, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "../api/client";
 import { useSearchStore } from "../stores/searchStore";
 import FollowUpFlow from "../components/search/FollowUpFlow";
-import EdgeCase     from "../components/search/EdgeCase";
+import EdgeCase from "../components/search/EdgeCase";
 
 const EXAMPLES = [
   "Affordable churches under £100k with parking in Kent",
@@ -16,9 +16,12 @@ const EXAMPLES = [
   "Church with development potential, Devon",
 ];
 
+const MAX_VISIBLE_CHARS = 120;
+
 export default function SearchPage() {
   const navigate = useNavigate();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
   const { setResults, setQuery, setIntent, query: storedQuery } = useSearchStore();
 
   const [q,            setQ]            = useState(storedQuery || "");
@@ -28,6 +31,15 @@ export default function SearchPage() {
   const [localIntent,  setLocalIntent]  = useState<any>(null);
   const [searchData,   setSearchData]   = useState<any>(null);
   const [focused,      setFocused]      = useState(false);
+  const [expanded,     setExpanded]     = useState(false);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 160) + "px";
+    }
+  }, [q]);
 
   const mut = useMutation({
     mutationFn: (query: string) =>
@@ -45,24 +57,73 @@ export default function SearchPage() {
   });
 
   function search(str = q) {
-    if (!str.trim()) return;
+    const trimmed = str.trim();
+    if (!trimmed) return;
     setEdgeCase(null);
     setShowFollowUp(false);
-    mut.mutate(str);
+    mut.mutate(trimmed);
   }
 
   function handleVoice() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { alert("Voice search requires Chrome or Edge."); return; }
+
+    // If already recording, stop
+    if (recording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
     const r = new SR();
     r.lang = "en-GB";
-    r.onstart  = () => setRecording(true);
-    r.onend    = () => setRecording(false);
-    r.onresult = (e: any) => {
-      const t = e.results[0][0].transcript;
-      setQ(t);
-      setTimeout(() => search(t), 200);
+    r.continuous = true;          // keep listening until stopped
+    r.interimResults = true;      // show partial results as user speaks
+    r.maxAlternatives = 1;
+
+    let finalTranscript = q;      // preserve existing text
+
+    r.onstart = () => {
+      setRecording(true);
     };
+
+    r.onresult = (e: any) => {
+      let interim = "";
+      let final = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          final += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      if (final) {
+        finalTranscript = (finalTranscript + " " + final).trim();
+      }
+      // Show interim results immediately as user speaks
+      setQ((finalTranscript + (interim ? " " + interim : "")).trim());
+    };
+
+    r.onend = () => {
+      setRecording(false);
+      recognitionRef.current = null;
+      // Auto-search if we captured something new
+      const captured = finalTranscript.trim();
+      if (captured && captured !== (storedQuery || "").trim()) {
+        setQ(captured);
+        setTimeout(() => search(captured), 200);
+      }
+    };
+
+    r.onerror = (e: any) => {
+      setRecording(false);
+      recognitionRef.current = null;
+      if (e.error !== "no-speech" && e.error !== "aborted") {
+        console.warn("Voice error:", e.error);
+      }
+    };
+
+    recognitionRef.current = r;
     r.start();
   }
 
@@ -71,15 +132,14 @@ export default function SearchPage() {
     navigate("/results");
   }
 
-  // Hide examples when: user has typed something, or follow-up is showing, or edge case
   const showExamples = !q.trim() && !showFollowUp && !edgeCase && !focused;
+  const isLong = q.length > MAX_VISIBLE_CHARS;
 
   return (
     <div className="search-hero">
       <p className="search-hero__eyebrow">UK Church &amp; Gathering Space Finder</p>
       <h1 className="search-hero__title">Find your next<br /><em>sacred space</em></h1>
 
-      {/* Sub-text — hide when follow-up is showing to save space */}
       {!showFollowUp && !edgeCase && (
         <p className="search-hero__sub">
           Describe exactly what you need. We search 30+ sources simultaneously.
@@ -87,30 +147,56 @@ export default function SearchPage() {
       )}
 
       <div className="searchbar-wrap">
-        <div className="searchbar">
-          <input
+        <div className={`searchbar searchbar--textarea${recording ? " searchbar--recording" : ""}`}>
+
+          {/* Textarea instead of input — auto-expands */}
+          <textarea
             ref={inputRef}
             className="searchbar__input"
-            placeholder="e.g. affordable church with parking, under £150k…"
+            placeholder="e.g. affordable church with parking, under £150k in Yorkshire…"
             value={q}
-            onChange={e => setQ(e.target.value)}
+            rows={1}
+            onChange={e => {
+              setQ(e.target.value);
+              setExpanded(false);
+            }}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            onKeyDown={e => e.key === "Enter" && search()}
-            autoFocus
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                search();
+              }
+            }}
+            style={{
+              resize: "none",
+              overflow: "hidden",
+              minHeight: 36,
+              maxHeight: 160,
+              lineHeight: "1.5",
+            }}
           />
+
           <div className="searchbar__actions">
+            {/* Voice button */}
             <button
               className={`btn-voice${recording ? " recording" : ""}`}
               onClick={handleVoice}
-              title="Voice search"
+              title={recording ? "Stop recording" : "Voice search"}
+              type="button"
             >
-              {recording ? <MicOff size={15} /> : <Mic size={15} />}
+              {recording
+                ? <MicOff size={15} color="#e53e3e" />
+                : <Mic size={15} />
+              }
             </button>
+
+            {/* Search button — always enabled if there's text */}
             <button
               className="btn-search"
               onClick={() => search()}
               disabled={mut.isPending || !q.trim()}
+              type="button"
             >
               {mut.isPending
                 ? <span className="spin" style={{ fontSize: "1rem" }}>◌</span>
@@ -120,7 +206,22 @@ export default function SearchPage() {
           </div>
         </div>
 
-        {/* Follow-up flow — appears directly below search bar */}
+        {/* Recording indicator */}
+        {recording && (
+          <div style={{
+            fontSize: "0.72rem", color: "#e53e3e",
+            marginTop: 6, display: "flex", alignItems: "center", gap: 6
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: "#e53e3e", display: "inline-block",
+              animation: "pulse 1s infinite"
+            }} />
+            Listening… tap mic to stop
+          </div>
+        )}
+
+        {/* Follow-up flow */}
         {showFollowUp && localIntent && !edgeCase && (
           <FollowUpFlow
             intent={localIntent}
@@ -138,13 +239,14 @@ export default function SearchPage() {
           />
         )}
 
-        {/* Examples — only show when idle */}
+        {/* Examples */}
         {showExamples && (
           <div className="examples">
             {EXAMPLES.map(ex => (
               <button
                 key={ex}
                 className="example"
+                type="button"
                 onClick={() => { setQ(ex); inputRef.current?.focus(); }}
               >
                 {ex}

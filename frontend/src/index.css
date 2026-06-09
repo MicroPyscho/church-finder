@@ -1007,3 +1007,44 @@ html, body, #root {
   .detail-price { font-size: 1.1rem; }
   .sidebar      { position: static; }
 }
+
+/* ── Voice recording pulse ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(1.3); }
+}
+
+.searchbar--recording {
+  border-color: #e53e3e !important;
+  box-shadow: 0 0 0 2px rgba(229,62,62,0.15) !important;
+}
+
+/* ── Textarea search bar ── */
+.searchbar--textarea {
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.searchbar--textarea .searchbar__input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  line-height: 1.5;
+  padding: 0;
+}
+
+.searchbar--textarea .searchbar__actions {
+  align-self: flex-start;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.btn-voice.recording {
+  background: rgba(229,62,62,0.08);
+  border-radius: 50%;
+}
