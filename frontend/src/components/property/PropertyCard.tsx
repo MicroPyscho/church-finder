@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { favouritesApi } from "../../api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import InterestModal from "../ui/InterestModal";
+import { useAuthStore } from "../../stores/authStore";
 import { descriptionSnippet } from "../../utils/text";
 
 interface Props {
@@ -121,6 +122,7 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
   const [modal, setModal] = useState(false);
   const [sent, setSent] = useState(false);
 
+  const { isLoggedIn, openGate } = useAuthStore();
   const favMut = useMutation({
     mutationFn: () => faved ? favouritesApi.remove(p.id) : favouritesApi.add(p.id),
     onSuccess: () => { setFaved(f => !f); qc.invalidateQueries({ queryKey: ["favourites"] }); },
@@ -148,7 +150,7 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
         </div>
 
         <button className={"pcard-fav" + (faved ? " saved" : "")}
-          onClick={e => { e.stopPropagation(); favMut.mutate(); }}
+          onClick={e => { e.stopPropagation(); if (!isLoggedIn) { openGate("favourite"); return; } favMut.mutate(); }}
           title={faved ? "Remove" : "Save"}>
           <Heart size={12} fill={faved ? "#d4170f" : "none"} color={faved ? "#d4170f" : "var(--mid)"} />
         </button>
@@ -189,7 +191,7 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
             <button className="pcard-btn primary" onClick={() => navigate("/properties/" + p.id)}>View more</button>
             {sent
               ? <span style={{ fontSize:"0.7rem", color:"var(--green)" }}>✓ Sent</span>
-              : <button className="pcard-btn" onClick={() => setModal(true)}><Mail size={10}/> Contact</button>
+              : <button className="pcard-btn" onClick={() => { if (!isLoggedIn) { openGate("enquiry"); return; } setModal(true); }}><Mail size={10}/> Contact</button>
             }
             <button className="pcard-btn" onClick={e => { e.stopPropagation(); window.open(p.source_url || p.url, "_blank", "noopener,noreferrer"); }}>
               <ExternalLink size={10}/> Source

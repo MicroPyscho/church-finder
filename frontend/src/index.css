@@ -1055,3 +1055,32 @@ html, body, #root {
 .btn-search--recording  { background: #e53e3e; color: #fff; }
 .btn-search--searching  { background: var(--mid); color: #fff; cursor: wait; }
 .btn-search--follow_up  { background: var(--green, #2d7a4f); color: #fff; }
+
+/* ── Mobile search bar fix ── */
+@media (max-width: 600px) {
+  .searchbar--textarea {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .searchbar--textarea .searchbar__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    align-self: stretch;
+  }
+  .searchbar--textarea .searchbar__input {
+    width: 100%;
+    min-height: 40px;
+  }
+  .btn-search {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 0.8rem;
+  }
+  .btn-voice {
+    width: 34px;
+    height: 34px;
+  }
+}

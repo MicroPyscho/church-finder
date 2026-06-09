@@ -10,39 +10,31 @@ import AlertsPage     from "./pages/AlertsPage";
 import AuthPage       from "./pages/AuthPage";
 import ConfirmPage    from "./pages/ConfirmPage";
 import AccountPage    from "./pages/AccountPage";
+import AuthGateModal  from "./components/ui/AuthGateModal";
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
 
 function DarkToggle() {
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem("sanctuary_theme");
-    if (saved) return saved === "dark";
-    return false;
-  });
-
+  const [dark, setDark] = useState(() =>
+    localStorage.getItem("sanctuary_theme") === "dark"
+  );
   useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("sanctuary_theme", dark ? "dark" : "light");
   }, [dark]);
-
   return (
     <button
       onClick={() => setDark(d => !d)}
       style={{
-        display: "flex", alignItems: "center", gap: 6,
-        background: "none", border: "1px solid var(--rule)",
-        borderRadius: 100, padding: "4px 10px 4px 8px",
-        cursor: "pointer", color: "var(--mid)",
-        fontSize: "0.76rem", transition: "all .15s",
-        fontFamily: "var(--font-body)",
+        display:"flex", alignItems:"center", gap:6,
+        background:"none", border:"1px solid var(--rule)",
+        borderRadius:100, padding:"4px 10px 4px 8px",
+        cursor:"pointer", color:"var(--mid)",
+        fontSize:"0.76rem", fontFamily:"var(--font-body)",
       }}
       title={dark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {dark ? <Sun size={13} /> : <Moon size={13} />}
+      {dark ? <Sun size={13}/> : <Moon size={13}/>}
       {dark ? "Light" : "Dark"}
     </button>
   );
@@ -55,14 +47,14 @@ function Nav() {
       <div className="wrap nav-inner">
         <button className="nav-logo" onClick={() => nav("/")}>Sanctuary</button>
         <div className="nav-links">
-          <NavLink to="/"           end       className={({isActive}) => "nav-link" + (isActive ? " active" : "")}>Search</NavLink>
-          <NavLink to="/favourites"           className={({isActive}) => "nav-link" + (isActive ? " active" : "")}>Saved</NavLink>
-          <NavLink to="/alerts"               className={({isActive}) => "nav-link" + (isActive ? " active" : "")}>Alerts</NavLink>
+          <NavLink to="/"           className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Search</NavLink>
+          <NavLink to="/favourites" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Saved</NavLink>
+          <NavLink to="/alerts"     className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Alerts</NavLink>
         </div>
         <div className="nav-right">
           <DarkToggle />
-          <NavLink to="/favourites" className="btn-sm" style={{border:"none"}}><Heart size={15}/></NavLink>
-          <NavLink to="/alerts"     className="btn-sm" style={{border:"none"}}><Bell  size={15}/></NavLink>
+          <NavLink to="/favourites" className="btn-sm" style={{ border:"none" }}><Heart size={15}/></NavLink>
+          <NavLink to="/alerts"     className="btn-sm" style={{ border:"none" }}><Bell  size={15}/></NavLink>
           <NavLink to="/account"    className="btn-sm"><User size={13}/> Account</NavLink>
         </div>
       </div>
@@ -87,6 +79,8 @@ export default function App() {
             <Route path="/account"        element={<AccountPage />} />
           </Routes>
         </div>
+        {/* Auth gate — shown globally when user tries to save/contact */}
+        <AuthGateModal />
       </BrowserRouter>
     </QueryClientProvider>
   );
