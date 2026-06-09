@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.database import engine, Base
-from app.routers import listings, deployments, health, properties, favourites
+from app.routers import listings, deployments, health, properties, favourites, enquiry
 from app.routers import search
 
 @asynccontextmanager
@@ -34,3 +34,4 @@ app.include_router(deployments.router, prefix='/deployments',    tags=['deployme
 app.include_router(properties.router,  prefix='/api/properties', tags=['properties'])
 app.include_router(favourites.router,  prefix='/api/favourites', tags=['favourites'])
 app.include_router(search.router,      prefix='/api/search',     tags=['search'])
+app.include_router(enquiry.router)
