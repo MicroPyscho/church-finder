@@ -26,8 +26,7 @@ export default function SearchPage() {
 
   const [q,            setQ]            = useState(storedQuery || "");
   const [recording, setRecording] = useState(false);
-  const voiceSupported = typeof window !== "undefined" && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-  const voiceSupported = !!(window.SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const voiceSupported = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
   const [edgeCase,     setEdgeCase]     = useState<any>(null);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [localIntent,  setLocalIntent]  = useState<any>(null);
