@@ -25,19 +25,37 @@ logger = logging.getLogger(__name__)
 
 # Church synonyms — expand user terms to catch all related listings
 SYNONYMS = {
-    "church":     ["church", "chapel", "ecclesiastical", "worship", "nave",
-                   "vestry", "tabernacle", "minster", "priory", "abbey",
-                   "cathedral", "gospel hall", "meeting house"],
-    "chapel":     ["chapel", "church", "methodist", "baptist", "wesleyan",
-                   "gospel hall", "meeting house", "tabernacle"],
-    "worship":    ["worship", "church", "chapel", "ecclesiastical",
-                   "congregation", "parish"],
-    "hall":       ["hall", "church hall", "community hall", "village hall",
-                   "assembly hall", "parish hall", "memorial hall"],
-    "cathedral":  ["cathedral", "minster", "church", "abbey", "priory"],
-    "methodist":  ["methodist", "wesleyan", "chapel"],
-    "baptist":    ["baptist", "chapel", "gospel hall"],
-    "religious":  ["church", "chapel", "worship", "ecclesiastical"],
+    # Plurals and stems map to same search terms
+    "church":       ["church", "chapel", "ecclesiastical", "worship", "nave",
+                     "vestry", "tabernacle", "minster", "priory", "abbey",
+                     "cathedral", "gospel hall", "meeting house"],
+    "churches":     ["church", "chapel", "ecclesiastical", "worship", "nave",
+                     "vestry", "tabernacle", "minster", "priory", "abbey",
+                     "cathedral", "gospel hall", "meeting house"],
+    "chapel":       ["chapel", "church", "methodist", "baptist", "wesleyan",
+                     "gospel hall", "meeting house", "tabernacle"],
+    "chapels":      ["chapel", "church", "methodist", "baptist", "wesleyan",
+                     "gospel hall", "meeting house", "tabernacle"],
+    "worship":      ["worship", "church", "chapel", "ecclesiastical",
+                     "congregation", "parish"],
+    "worshipping":  ["worship", "church", "chapel", "ecclesiastical"],
+    "hall":         ["hall", "church hall", "community hall", "village hall",
+                     "assembly hall", "parish hall", "memorial hall"],
+    "halls":        ["hall", "church hall", "community hall", "village hall"],
+    "cathedral":    ["cathedral", "minster", "church", "abbey", "priory"],
+    "cathedrals":   ["cathedral", "minster", "church", "abbey", "priory"],
+    "methodist":    ["methodist", "wesleyan", "chapel"],
+    "methodists":   ["methodist", "wesleyan", "chapel"],
+    "baptist":      ["baptist", "chapel", "gospel hall"],
+    "baptists":     ["baptist", "chapel", "gospel hall"],
+    "religious":    ["church", "chapel", "worship", "ecclesiastical"],
+    "ecclesiastical":["church", "chapel", "ecclesiastical", "worship"],
+    "abbey":        ["abbey", "priory", "minster", "church"],
+    "abbeys":       ["abbey", "priory", "minster", "church"],
+    "priory":       ["priory", "abbey", "minster", "church"],
+    "priories":     ["priory", "abbey", "minster", "church"],
+    "minster":      ["minster", "cathedral", "church", "abbey"],
+    "minsters":     ["minster", "cathedral", "church", "abbey"],
 }
 
 def expand(words: list[str]) -> list[str]:
@@ -114,9 +132,21 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
     # No stopwords. No restrictions. DB is already clean.
     words = [w.lower() for w in re.findall(r"[a-zA-Z]{3,}", req.query)]
     # Only skip pure connectives
-    skip = {"the","and","for","with","from","that","this","have",
-            "been","they","near","about","within","under","above",
-            "between","looking","want","find","some","any"}
+    skip = {
+        # Articles and conjunctions
+        "the","and","or","but","a","an",
+        # Prepositions — "church IN london", "chapel NEAR york"
+        "in","at","on","of","to","by","up",
+        "for","from","with","into","onto","upon",
+        "near","around","within","outside","inside",
+        "about","above","below","under","over",
+        "between","among","across","along","beside",
+        # Common query filler
+        "that","this","have","been","they","there",
+        "looking","want","find","some","any","please",
+        "show","list","get","give","tell","search",
+        "like","just","also","only","very","quite",
+    }
     words = [w for w in words if w not in skip]
 
     if words:
@@ -167,10 +197,17 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
                 continue
             geo_score = proximity_score(distance)
 
-        # If no coordinates and location search active, skip
-        # (we only fetched geocoded listings for location queries)
+        # Non-geocoded listing with location search:
+        # Check if location text matches the search region
         if location_key and not listing.lat:
-            continue
+            tiers_data = get_tiers(req.query) or {}
+            all_terms = tiers_data.get("exact",[]) + tiers_data.get("near",[])
+            loc_text = (listing.location or "").lower()
+            text_hit = any(t.lower() in loc_text for t in all_terms if len(t) > 2)
+            if not text_hit:
+                continue
+            # Give text-matched non-geocoded listing a mid score
+            geo_score = 75
 
         criteria = _criteria(listing, intent, location_key)
         base     = _score(criteria, listing)
