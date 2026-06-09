@@ -25,7 +25,9 @@ export default function SearchPage() {
   const { setResults, setQuery, setIntent, query: storedQuery } = useSearchStore();
 
   const [q,            setQ]            = useState(storedQuery || "");
-  const [recording,    setRecording]    = useState(false);
+  const [recording, setRecording] = useState(false);
+  const voiceSupported = typeof window !== "undefined" && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const voiceSupported = !!(window.SpeechRecognition || (window as any).webkitSpeechRecognition);
   const [edgeCase,     setEdgeCase]     = useState<any>(null);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [localIntent,  setLocalIntent]  = useState<any>(null);
@@ -66,7 +68,7 @@ export default function SearchPage() {
 
   function handleVoice() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert("Voice search requires Chrome or Edge."); return; }
+    if (!SR) return;
 
     // If already recording, stop
     if (recording && recognitionRef.current) {
