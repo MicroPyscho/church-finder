@@ -174,6 +174,8 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
     # Step 4 — Score with price filter
     price_min = intent.get("price_min") or 0
     price_max = intent.get("price_max")
+    size_min  = intent.get("size_min_sqft")
+    size_max  = intent.get("size_max_sqft")
 
     results = []
     MAX_RADIUS = 200  # miles — beyond this, different region entirely
@@ -186,6 +188,15 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
                 continue
             if price_min and lp < price_min * 0.9:
                 continue
+
+        # Size filter — extract sqft from description
+        if size_min or size_max:
+            listing_size = _extract_size(listing.title or "", listing.description or "")
+            if listing_size is not None:
+                if size_min and listing_size < size_min * 0.8:
+                    continue
+                if size_max and listing_size > size_max * 1.2:
+                    continue
 
         # Onion-ring proximity scoring
         geo_score = None
@@ -276,6 +287,21 @@ def _follow_up(intent: dict) -> list:
             opts = ["Yes","No","Not sure"]
         result.append({"id": f"q{i}", "question": q, "options": opts})
     return result
+
+
+
+def _extract_size(title: str, description: str) -> int | None:
+    """Extract square footage from listing text."""
+    text = (title + ' ' + description).lower()
+    # Match patterns like: 1,234 sq ft / 1234 sqft / 1,234 sq. ft
+    m = re.search(r'([\d,]+)\s*sq\.?\s*ft', text)
+    if m:
+        return int(m.group(1).replace(',', ''))
+    # Also match square metres and convert (1 sqm = 10.764 sqft)
+    m2 = re.search(r'([\d,]+)\s*sq\.?\s*m', text)
+    if m2:
+        return int(int(m2.group(1).replace(',', '')) * 10.764)
+    return None
 
 
 def _criteria(listing: Listing, intent: dict, location_key: str = None) -> list:

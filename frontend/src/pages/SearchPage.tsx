@@ -34,27 +34,6 @@ export default function SearchPage() {
   const [focused,      setFocused]      = useState(false);
   const [expanded,     setExpanded]     = useState(false);
 
-  // ── Button state machine ─────────────────────────────────────────────
-  // Derives what the search button should show based on current context.
-  // No AI needed — pure UI state logic.
-  type ButtonState = "idle" | "typing" | "recording" | "searching" | "follow_up"
-  const buttonState: ButtonState =
-    recording        ? "recording"  :
-    mut.isPending    ? "searching"  :
-    showFollowUp     ? "follow_up"  :
-    q.trim()         ? "typing"     :
-    "idle"
-
-  const BUTTON_CONFIG: Record<ButtonState, { label: string; icon: string; hint: string }> = {
-    idle:       { label: "Search",     icon: "search",   hint: "Type or speak your query" },
-    typing:     { label: "Search",     icon: "search",   hint: "Press Enter or click Search" },
-    recording:  { label: "Stop",       icon: "stop",     hint: "Tap to stop recording" },
-    searching:  { label: "Searching",  icon: "spinner",  hint: "Finding properties..." },
-    follow_up:  { label: "Continue",   icon: "arrow",    hint: "Answer above to refine results" },
-  }
-  const btn = BUTTON_CONFIG[buttonState]
-
-  // Auto-resize textarea
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
@@ -76,6 +55,22 @@ export default function SearchPage() {
       if (!data.follow_up_questions?.length) navigate("/results");
     },
   });
+
+  // ── Button state machine (must be after useMutation) ─────────────────
+  const buttonState =
+    recording     ? "recording" :
+    mut.isPending ? "searching" :
+    showFollowUp  ? "follow_up" :
+    q.trim()      ? "typing"    :
+    "idle"
+  const BUTTON_CONFIG = {
+    idle:      { label: "Search",    hint: "Type or speak your query" },
+    typing:    { label: "Search",    hint: "Press Enter or click Search" },
+    recording: { label: "Stop",      hint: "Tap to stop recording" },
+    searching: { label: "Searching", hint: "Finding properties..." },
+    follow_up: { label: "Continue",  hint: "Answer above to refine results" },
+  } as const
+  const btn = BUTTON_CONFIG[buttonState as keyof typeof BUTTON_CONFIG]
 
   function search(str = q) {
     const trimmed = str.trim();

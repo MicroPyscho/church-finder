@@ -121,6 +121,10 @@ follow_up_questions: 1-2 questions specific to this query. Never generic."""
         )
         data = json.loads(result)
         data["locations"] = locations
+        # Ensure size fields exist
+        data.setdefault("size_min_sqft", None)
+        data.setdefault("size_max_sqft", None)
+        data.setdefault("features", [])
         return data
     except Exception as e:
         logger.warning("Groq intent parse failed: %s", e)

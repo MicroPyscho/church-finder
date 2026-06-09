@@ -6,6 +6,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.database import engine, Base
 from app.logging_config import configure_logging
+import time
+import logging
+request_logger = logging.getLogger("sanctuary.requests")
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -53,6 +56,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request, call_next):
+    """Log every request with timing. Helps debug slow endpoints."""
+    start = time.time()
+    response = await call_next(request)
+    elapsed = (time.time() - start) * 1000
+    request_logger.info(
+        "%s %s -> %d (%.0fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed,
+    )
+    return response
+
 
 app.include_router(health.router,       prefix="/health",         tags=["health"])
 app.include_router(listings.router,     prefix="/listings",       tags=["listings"])
