@@ -52,3 +52,5 @@ Thumbs.db
 *.log
 crawler.log
 docker-compose.override.yml
+backend/.env
+.env
