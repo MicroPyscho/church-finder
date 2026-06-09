@@ -6,12 +6,20 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.database import engine, Base
 from app.logging_config import configure_logging
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.scheduler import start_scheduler, stop_scheduler
 from app.routers import listings, deployments, health, properties, favourites, enquiry
 from app.routers import search
 
 # Configure structured logging before anything else
 configure_logging()
+
+# Rate limiter — 60 searches/min per IP (protects Groq free tier)
+# Switch to Redis backend when scaling beyond single server
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 
 @asynccontextmanager
@@ -35,6 +43,9 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(SlowAPIMiddleware)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
