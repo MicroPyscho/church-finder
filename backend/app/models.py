@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, Float
 from app.database import Base
 
 
@@ -18,6 +18,9 @@ class Listing(Base):
     first_seen    = Column(DateTime, default=datetime.utcnow)
     last_seen     = Column(DateTime, default=datetime.utcnow)
     is_active     = Column(Boolean, default=True)
+    lat           = Column(Float, nullable=True)
+    lon           = Column(Float, nullable=True)
+    geocoded      = Column(Boolean, default=False)
     is_off_market = Column(Boolean, default=False)
 
 

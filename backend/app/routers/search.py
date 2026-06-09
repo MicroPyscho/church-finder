@@ -18,6 +18,7 @@ from app.database import get_db
 from app.models import Listing
 from app.services.groq_client import parse_search_intent
 from app.services.location_tiers import get_tiers, detect_location
+from app.services.geocoder import get_location_centroid, haversine, proximity_score
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -80,14 +81,28 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
     location_key = detect_location(req.query)
     intent["locations"] = [location_key.title()] if location_key else []
 
-    if tiers:
+    centroid = get_location_centroid(req.query) if location_key else None
+
+    if centroid and tiers:
+        # Geo search: fetch all geocoded listings, score by distance
+        # Also include tier terms as fallback for non-geocoded listings
         exact_terms = tiers.get("exact", [])
         near_terms  = tiers.get("near", [])
         all_terms   = list(dict.fromkeys(exact_terms + near_terms))
-        # Limit to 30 terms max to avoid PostgreSQL bind parameter limits
-        # Prioritise: short postcode prefixes (most useful) over long place names
-        short = [t for t in all_terms if len(t) <= 4][:20]
-        long  = [t for t in all_terms if len(t) > 4][:10]
+        short = [t for t in all_terms if len(t) <= 4][:15]
+        long  = [t for t in all_terms if len(t) > 4][:8]
+        use_terms = list(dict.fromkeys(short + long))
+        if use_terms:
+            q = q.where(or_(
+                Listing.lat.isnot(None),  # has coordinates
+                *[Listing.location.ilike(f"%{t}%") for t in use_terms]
+            ))
+    elif tiers:
+        exact_terms = tiers.get("exact", [])
+        near_terms  = tiers.get("near", [])
+        all_terms   = list(dict.fromkeys(exact_terms + near_terms))
+        short = [t for t in all_terms if len(t) <= 4][:15]
+        long  = [t for t in all_terms if len(t) > 4][:8]
         use_terms = list(dict.fromkeys(short + long))
         if use_terms:
             q = q.where(or_(
@@ -131,15 +146,39 @@ async def search(req: SearchRequest, db: AsyncSession = Depends(get_db)):
     price_max = intent.get("price_max")
 
     results = []
+    MAX_RADIUS = 200  # miles — beyond this, different region entirely
+
     for listing in rows:
+        # Price filter
         lp = extract_price(listing.price or "")
         if lp is not None:
             if price_max and lp > price_max * 1.1:
                 continue
             if price_min and lp < price_min * 0.9:
                 continue
+
+        # Onion-ring proximity scoring
+        geo_score = None
+        distance  = None
+        if centroid and listing.lat and listing.lon:
+            distance = haversine(centroid[0], centroid[1], listing.lat, listing.lon)
+            # Beyond max radius = different region, exclude
+            if distance > MAX_RADIUS:
+                continue
+            geo_score = proximity_score(distance)
+
+        # If no coordinates and location search active, skip
+        # (we only fetched geocoded listings for location queries)
+        if location_key and not listing.lat:
+            continue
+
         criteria = _criteria(listing, intent, location_key)
-        results.append(_to_dict(listing, _score(criteria, listing), criteria))
+        base     = _score(criteria, listing)
+        score    = geo_score if geo_score is not None else base
+        result   = _to_dict(listing, score, criteria)
+        if distance is not None:
+            result["_distance_miles"] = round(distance, 1)
+        results.append(result)
 
     results.sort(key=lambda x: x["_score"], reverse=True)
 
