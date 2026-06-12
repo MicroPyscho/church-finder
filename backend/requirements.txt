@@ -30,3 +30,5 @@ ruff==0.4.7
 mypy==1.10.0
 apscheduler==3.10.4
 slowapi==0.1.9
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4

@@ -46,3 +46,21 @@ class Deployment(Base):
     deployed_by = Column(String, nullable=True)
     status      = Column(String, default="active")
     notes       = Column(Text, nullable=True)
+
+
+class User(Base):
+    __tablename__ = "users"
+    id          = Column(Integer, primary_key=True)
+    email       = Column(String, unique=True, nullable=False)
+    name        = Column(String, nullable=False)
+    hashed_pw   = Column(String, nullable=False)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    is_active   = Column(Boolean, default=True)
+
+
+class UserFavourite(Base):
+    __tablename__ = "user_favourites"
+    id          = Column(Integer, primary_key=True)
+    user_id     = Column(Integer, nullable=False)
+    listing_id  = Column(String, nullable=False)
+    saved_at    = Column(DateTime, default=datetime.utcnow)

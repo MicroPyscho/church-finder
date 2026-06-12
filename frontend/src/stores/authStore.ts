@@ -1,24 +1,42 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-interface AuthState {
-  isLoggedIn:    boolean;
-  user:          any | null;
-  showAuthGate:  boolean;
-  gateReason:    "favourite" | "enquiry" | null;
-  setUser:       (user: any) => void;
-  logout:        () => void;
-  openGate:      (reason: "favourite" | "enquiry") => void;
-  closeGate:     () => void;
+interface AuthUser {
+  id:    number;
+  email: string;
+  name:  string;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  isLoggedIn:   false,
-  user:         null,
-  showAuthGate: false,
-  gateReason:   null,
+interface AuthState {
+  isLoggedIn:   boolean;
+  user:         AuthUser | null;
+  showAuthGate: boolean;
+  gateReason:   "favourite" | "enquiry" | null;
+  setUser:      (user: AuthUser) => void;
+  logout:       () => void;
+  openGate:     (reason: "favourite" | "enquiry") => void;
+  closeGate:    () => void;
+}
 
-  setUser: (user) => set({ user, isLoggedIn: true, showAuthGate: false }),
-  logout:  ()     => set({ user: null, isLoggedIn: false }),
-  openGate:  (reason) => set({ showAuthGate: true, gateReason: reason }),
-  closeGate: ()       => set({ showAuthGate: false, gateReason: null }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      isLoggedIn:   false,
+      user:         null,
+      showAuthGate: false,
+      gateReason:   null,
+
+      setUser:   (user) => set({ user, isLoggedIn: true, showAuthGate: false }),
+      logout:    ()     => {
+        localStorage.removeItem("sanctuary_token");
+        set({ user: null, isLoggedIn: false });
+      },
+      openGate:  (reason) => set({ showAuthGate: true, gateReason: reason }),
+      closeGate: ()       => set({ showAuthGate: false, gateReason: null }),
+    }),
+    {
+      name:    "sanctuary_auth",
+      partialize: (s) => ({ isLoggedIn: s.isLoggedIn, user: s.user }),
+    }
+  )
+);

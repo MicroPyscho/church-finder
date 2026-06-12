@@ -11,6 +11,7 @@ import AuthPage       from "./pages/AuthPage";
 import ConfirmPage    from "./pages/ConfirmPage";
 import AccountPage    from "./pages/AccountPage";
 import AuthGateModal  from "./components/ui/AuthGateModal";
+import { useAuthStore } from "./stores/authStore";
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
 
@@ -42,6 +43,7 @@ function DarkToggle() {
 
 function Nav() {
   const nav = useNavigate();
+  const { isLoggedIn, user, logout } = useAuthStore();
   return (
     <nav className="nav">
       <div className="wrap nav-inner">
@@ -55,7 +57,12 @@ function Nav() {
           <DarkToggle />
           <NavLink to="/favourites" className="btn-sm" style={{ border:"none" }}><Heart size={15}/></NavLink>
           <NavLink to="/alerts"     className="btn-sm" style={{ border:"none" }}><Bell  size={15}/></NavLink>
-          <NavLink to="/account"    className="btn-sm"><User size={13}/> Account</NavLink>
+          {isLoggedIn && user
+  ? <button className="btn-sm" onClick={logout} style={{ color:"var(--mid)" }}>
+      <User size={13}/> {user.name.split(" ")[0]}
+    </button>
+  : <NavLink to="/account" className="btn-sm"><User size={13}/> Account</NavLink>
+}
         </div>
       </div>
     </nav>
