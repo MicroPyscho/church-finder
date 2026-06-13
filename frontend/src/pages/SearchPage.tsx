@@ -158,8 +158,8 @@ export default function SearchPage() {
 
   return (
     <div className="search-hero">
-      <p className="search-hero__eyebrow">UK Church &amp; Gathering Space Finder</p>
-      <h1 className="search-hero__title">Find your next<br /><em>sacred space</em></h1>
+      <p className="search-hero__eyebrow">Property Search</p>
+      <h1 className="search-hero__title">The UK's dedicated search for<br /><em>churches, chapels and sacred spaces</em></h1>
 
       {!showFollowUp && !edgeCase && (
         <p className="search-hero__sub">
