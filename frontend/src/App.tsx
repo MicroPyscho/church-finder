@@ -27,7 +27,12 @@ function Nav({ dark }: { dark: boolean }) {
           <img
             src={dark ? "/nave-logo-white.svg" : "/nave-logo-black.svg"}
             alt="Nave"
-            style={{ height:28, display:"block" }}
+            style={{
+              height: "clamp(18px, 3vw, 24px)",
+              width: "auto",
+              maxWidth: "clamp(80px, 12vw, 110px)",
+              display: "block",
+            }}
             onError={e => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
