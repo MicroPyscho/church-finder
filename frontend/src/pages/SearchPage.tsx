@@ -161,7 +161,7 @@ export default function SearchPage() {
       <p className="search-hero__eyebrow">Nave Property Search</p>
       <h1 className="search-hero__title" style={{textAlign:"center",display:"inline-block",width:"100%"}}>
         <span style={{display:"block"}}>UK's dedicated search</span>
-        <span style={{display:"block",paddingLeft:"1.9em"}}>
+        <span style={{display:"block",paddingLeft:"0"}}>
           <em style={{
             fontFamily:"'League Script', cursive",
             fontStyle:"bold",
