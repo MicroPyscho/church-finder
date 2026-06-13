@@ -1,3 +1,4 @@
+import { useSEO } from "../hooks/useSEO";
 import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +27,10 @@ function getBand(score: number): number {
 }
 
 export default function ResultsPage() {
+  useSEO({
+    title:       query ? `${query} — Search Results` : "Search Results",
+    description: `Church and chapel properties matching "${query}" across the UK.`,
+  });
   const navigate = useNavigate();
   const { query, results, intent, filters, page, sortBy, setResults, setPage, setSortBy } = useSearchStore();
 

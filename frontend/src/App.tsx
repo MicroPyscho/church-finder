@@ -10,6 +10,7 @@ import AlertsPage     from "./pages/AlertsPage";
 import AuthPage       from "./pages/AuthPage";
 import ConfirmPage    from "./pages/ConfirmPage";
 import AccountPage    from "./pages/AccountPage";
+import LocationPage   from "./pages/LocationPage";
 import AuthGateModal  from "./components/ui/AuthGateModal";
 import { useAuthStore } from "./stores/authStore";
 
@@ -84,6 +85,8 @@ export default function App() {
             <Route path="/auth"           element={<AuthPage />} />
             <Route path="/confirmed"      element={<ConfirmPage />} />
             <Route path="/account"        element={<AccountPage />} />
+            <Route path="/churches-for-sale"         element={<LocationPage />} />
+            <Route path="/churches-for-sale/:region"  element={<LocationPage />} />
           </Routes>
         </div>
         {/* Auth gate — shown globally when user tries to save/contact */}

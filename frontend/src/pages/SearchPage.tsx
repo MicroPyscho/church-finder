@@ -1,3 +1,4 @@
+import { useSEO } from "../hooks/useSEO";
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +20,10 @@ const EXAMPLES = [
 const MAX_VISIBLE_CHARS = 120;
 
 export default function SearchPage() {
+  useSEO({
+    title:       "Sanctuary",
+    description: "Search 100+ churches, chapels and places of worship for sale across the UK. Find your perfect ecclesiastical property.",
+  });
   const navigate = useNavigate();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
