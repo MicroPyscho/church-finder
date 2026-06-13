@@ -159,30 +159,30 @@ export default function SearchPage() {
   return (
     <div className="search-hero">
       <p className="search-hero__eyebrow">Property Search</p>
-      <h1 className="search-hero__title">
-        The UK's dedicated search
-        <br />
-        <span style={{display:"flex",alignItems:"baseline",gap:"0.25em",flexWrap:"wrap"}}>
+      <h1 className="search-hero__title" style={{textAlign:"center",display:"inline-block",width:"100%"}}>
+        <span style={{display:"block"}}>The UK's dedicated search</span>
+        <span style={{display:"block",paddingLeft:"1.9em"}}>
           <em style={{
             fontFamily:"'League Script', cursive",
-            fontStyle:"normal",
+            fontStyle:"bold",
             fontSize:"1.15em",
             lineHeight:1,
-            opacity:0.85,
-            fontWeight:400,
-          }}>for</em>
-          <span>churches, chapels <em style={{
+            opacity:0.9,
+            fontWeight:600,
+            marginRight:"0.25em",
+          }}>for</em>churches, chapels <em style={{
             fontFamily:"'League Script', cursive",
-            fontStyle:"normal",
-            fontSize:"1.1em",
-            fontWeight:400,
-          }}>&amp;</em> sacred spaces.</span>
+            fontStyle:"bold",
+            fontSize:"1.15em",
+            fontWeight:600,
+            margin:"0 0.1em",
+          }}>&amp;</em> sacred spaces.
         </span>
       </h1>
 
       {!showFollowUp && !edgeCase && (
         <p className="search-hero__sub">
-          Describe exactly what you need. We search 30+ sources simultaneously.
+          Describe your need. We search 30+ sources.
         </p>
       )}
 
