@@ -10,6 +10,7 @@ export default function AuthGateModal() {
   const [password,  setPassword]  = useState("");
   const [name,      setName]      = useState("");
   const [showPw,    setShowPw]    = useState(false);
+  const [pwFocused,  setPwFocused]  = useState(false);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
 
@@ -112,6 +113,8 @@ export default function AuthGateModal() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSubmit()}
+              onFocus={() => setPwFocused(true)}
+              onBlur={() => setPwFocused(false)}
               style={{ paddingRight:40, width:"100%", boxSizing:"border-box" }}
             />
             <button
@@ -127,6 +130,11 @@ export default function AuthGateModal() {
               {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
             </button>
           </div>
+          {pwFocused && password.length > 0 && password.length < 6 && (
+            <p style={{ fontSize:"0.72rem", color:"var(--mid)", margin:0 }}>
+              {6 - password.length} more character{6 - password.length !== 1 ? "s" : ""} needed
+            </p>
+          )}
 
           {error && (
             <p style={{ color:"#e53e3e", fontSize:"0.75rem", margin:0 }}>{error}</p>
@@ -144,8 +152,7 @@ export default function AuthGateModal() {
           borderTop:"1px solid var(--rule)", textAlign:"center",
         }}>
           <p style={{ fontSize:"0.72rem", color:"var(--mid)", margin:0 }}>
-            <Church size={11} style={{ verticalAlign:"middle", marginRight:4 }}/>
-            Searching and browsing is always free — no account needed
+            🔒 Secure login &nbsp;·&nbsp; Searching is always free
           </p>
         </div>
       </div>

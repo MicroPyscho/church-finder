@@ -99,6 +99,9 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
     user = User(
         email=req.email.lower(),
         name=req.name,
