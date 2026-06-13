@@ -159,7 +159,26 @@ export default function SearchPage() {
   return (
     <div className="search-hero">
       <p className="search-hero__eyebrow">Property Search</p>
-      <h1 className="search-hero__title">The UK's dedicated search for<br /><em>churches, chapels and sacred spaces</em></h1>
+      <h1 className="search-hero__title">
+        The UK's dedicated search
+        <br />
+        <span style={{display:"flex",alignItems:"baseline",gap:"0.25em",flexWrap:"wrap"}}>
+          <em style={{
+            fontFamily:"'League Script', cursive",
+            fontStyle:"normal",
+            fontSize:"1.15em",
+            lineHeight:1,
+            opacity:0.85,
+            fontWeight:400,
+          }}>for</em>
+          <span>churches, chapels <em style={{
+            fontFamily:"'League Script', cursive",
+            fontStyle:"normal",
+            fontSize:"1.1em",
+            fontWeight:400,
+          }}>&amp;</em> sacred spaces.</span>
+        </span>
+      </h1>
 
       {!showFollowUp && !edgeCase && (
         <p className="search-hero__sub">
