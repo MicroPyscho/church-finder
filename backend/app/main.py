@@ -14,7 +14,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.scheduler import start_scheduler, stop_scheduler
-from app.routers import listings, deployments, health, properties, favourites, enquiry, auth
+from app.routers import listings, deployments, health, properties, favourites, enquiry, auth, seo
 from app.routers import search
 
 # Configure structured logging before anything else
@@ -82,3 +82,4 @@ app.include_router(favourites.router,   prefix="/api/favourites", tags=["favouri
 app.include_router(search.router,       prefix="/api/search",     tags=["search"])
 app.include_router(enquiry.router)
 app.include_router(auth.router)
+app.include_router(seo.router)
