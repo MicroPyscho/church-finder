@@ -131,13 +131,14 @@ input, textarea, select { font-family: var(--font-body); }
 }
 
 /* SEARCH BAR */
-.searchbar-wrap { width: 100%; max-width: 680px; }
+.searchbar-wrap { width: 100%; max-width: clamp(300px, 90vw, 680px); margin: 0 auto; }
 .searchbar {
   width: 100%; display: flex; align-items: center;
   background: var(--white);
   border: 1.5px solid var(--ink);
   border-radius: 100px;
-  padding: 10px 10px 10px 22px; gap: 10px;
+  padding: clamp(6px,1.5vw,10px) clamp(6px,1.5vw,10px) clamp(6px,1.5vw,10px) clamp(12px,2.5vw,22px);
+  gap: clamp(6px,1.5vw,10px);
   transition: box-shadow var(--t);
 }
 .searchbar:focus-within {
@@ -147,7 +148,7 @@ input, textarea, select { font-family: var(--font-body); }
 .searchbar__input {
   flex: 1; min-width: 0; border: none;
   background: transparent;
-  font-size: 0.95rem; color: var(--ink); outline: none;
+  font-size: clamp(0.78rem, 2vw, 0.95rem); color: var(--ink); outline: none;
 }
 .searchbar__input::placeholder { color: var(--mid); }
 .searchbar__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }

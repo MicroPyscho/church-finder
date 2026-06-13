@@ -169,13 +169,13 @@ export default function SearchPage() {
             lineHeight:1,
             opacity:0.9,
             fontWeight:600,
-            marginRight:"0.25em",
+            marginRight:"0.10em",
           }}>for</em>churches, chapels <em style={{
             fontFamily:"'League Script', cursive",
             fontStyle:"bold",
             fontSize:"1.15em",
             fontWeight:600,
-            margin:"0 0.1em",
+            margin:"0 0.01em",
           }}>&amp;</em> sacred spaces.
         </span>
       </h1>
