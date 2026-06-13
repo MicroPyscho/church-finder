@@ -42,13 +42,15 @@ function DarkToggle() {
   );
 }
 
-function Nav() {
+function Nav({ dark }: { dark: boolean }) {
   const nav = useNavigate();
   const { isLoggedIn, user, logout } = useAuthStore();
   return (
     <nav className="nav">
       <div className="wrap nav-inner">
-        <button className="nav-logo" onClick={() => nav("/")}>Sanctuary</button>
+        <button className="nav-logo" onClick={() => nav("/")} style={{padding:0,background:"none",border:"none",cursor:"pointer"}}>
+      <img src={dark ? "/nave-logo-white.svg" : "/nave-logo-black.svg"} alt="Nave" style={{height:28,display:"block"}} />
+    </button>
         <div className="nav-links">
           <NavLink to="/"           className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Search</NavLink>
           <NavLink to="/favourites" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Saved</NavLink>
@@ -74,7 +76,7 @@ export default function App() {
   return (
     <QueryClientProvider client={qc}>
       <BrowserRouter>
-        <Nav />
+        <Nav dark={dark} />
         <div className="page">
           <Routes>
             <Route path="/"               element={<SearchPage />} />

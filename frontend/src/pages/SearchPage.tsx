@@ -21,7 +21,7 @@ const MAX_VISIBLE_CHARS = 120;
 
 export default function SearchPage() {
   useSEO({
-    title:       "Sanctuary",
+    title:       "Nave",
     description: "Search 100+ churches, chapels and places of worship for sale across the UK. Find your perfect ecclesiastical property.",
   });
   const navigate = useNavigate();
@@ -160,7 +160,7 @@ export default function SearchPage() {
     <div className="search-hero">
       <p className="search-hero__eyebrow">Property Search</p>
       <h1 className="search-hero__title" style={{textAlign:"center",display:"inline-block",width:"100%"}}>
-        <span style={{display:"block"}}>The UK's dedicated search</span>
+        <span style={{display:"block"}}>UK's dedicated search</span>
         <span style={{display:"block",paddingLeft:"1.9em"}}>
           <em style={{
             fontFamily:"'League Script', cursive",

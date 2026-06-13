@@ -300,7 +300,7 @@ export default function AuthPage() {
       <div className="auth-left" style={S.left}>
         <div style={S.logoMark}>
           <span style={{ width:8, height:8, borderRadius:"50%", background:"#1a7a3c", flexShrink:0, display:"inline-block" }} />
-          Sanctuary
+          Nave
         </div>
 
         <div>
@@ -324,7 +324,7 @@ export default function AuthPage() {
         </div>
 
         <p style={S.legal}>
-          © 2026 Sanctuary. Church &amp; Gathering Space Intelligence.<br />
+          © 2026 Nave. Church &amp; Gathering Space Intelligence.<br />
           UK hosted · ICO registered · GDPR compliant
         </p>
       </div>
@@ -361,7 +361,7 @@ export default function AuthPage() {
           <>
             <div className="rise">
               <h2 style={S.formTitle}>{mode === "signup" ? "Create account" : "Welcome back"}</h2>
-              <p style={S.formSub}>{mode === "signup" ? "Start finding your sacred space." : "Sign in to your Sanctuary account."}</p>
+              <p style={S.formSub}>{mode === "signup" ? "Start finding your sacred space." : "Sign in to your Nave account."}</p>
             </div>
 
             {/* ── Method tabs ────────────────────────────────────────────── */}

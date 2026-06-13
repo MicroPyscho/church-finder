@@ -182,7 +182,7 @@ function ViewingsSection() {
       <Calendar size={28} strokeWidth={1} style={{ margin: "0 auto 12px" }} />
       <p style={{ fontSize: "0.85rem" }}>No viewings booked yet.</p>
       <p style={{ fontSize: "0.78rem", marginTop: 6, maxWidth: 280, margin: "8px auto 0" }}>
-        When you request viewings through Sanctuary, they'll appear here.
+        When you request viewings through Nave, they'll appear here.
       </p>
     </div>
   );
@@ -234,7 +234,7 @@ function SettingsSection({ logout }: { logout: () => void }) {
 
 function FaqSection() {
   const items = [
-    { q: "How does Sanctuary source its listings?",   a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals, and the Charities Commission. Data refreshes every 3 hours." },
+    { q: "How does Nave source its listings?",   a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals, and the Charities Commission. Data refreshes every 3 hours." },
     { q: "What does the AI score mean?",              a: "The conversion score (0–10) reflects suitability for your stated purpose — based on listing details, planning status, location, and comparable transactions." },
     { q: "How do pre-market signals work?",           a: "We monitor Charities Commission filings, Companies House dissolutions, and planning applications. These can give 6–18 months advance notice before a property lists." },
     { q: "Is my data safe?",                          a: "Yes. AES-256 encryption, UK data centres, ICO registered. Export or delete your data at any time from your profile." },
@@ -305,10 +305,10 @@ function TermsSection() {
     <div style={{ fontSize: "0.84rem", color: "var(--mid)", lineHeight: 1.75 }}>
       <p style={{ marginBottom: 16 }}><strong style={{ color: "var(--ink)" }}>Last updated:</strong> June 2026</p>
       {[
-        { h: "Service description",    b: "Sanctuary aggregates publicly available property listings and provides AI-powered analysis. We are not an estate agent and do not act on your behalf in any transaction." },
+        { h: "Service description",    b: "Nave aggregates publicly available property listings and provides AI-powered analysis. We are not an estate agent and do not act on your behalf in any transaction." },
         { h: "AI analysis disclaimer", b: "AI scores are indicative only. They do not constitute professional property, legal, or financial advice. Always instruct qualified professionals before purchasing." },
         { h: "Data accuracy",          b: "Listing data is sourced from third parties. We cannot guarantee accuracy or availability. Always verify directly with the source." },
-        { h: "Acceptable use",         b: "You may not scrape, automate, or resell data from Sanctuary. The service is for personal property search only." },
+        { h: "Acceptable use",         b: "You may not scrape, automate, or resell data from Nave. The service is for personal property search only." },
         { h: "Governing law",          b: "These terms are governed by English law. Disputes are subject to the exclusive jurisdiction of English courts." },
       ].map(({ h, b }) => (
         <div key={h} style={{ marginBottom: 18 }}>
@@ -326,7 +326,7 @@ function LandlordSection() {
       <Building2 size={32} strokeWidth={1} color="var(--mid)" style={{ margin: "0 auto 16px" }} />
       <p style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 8, color: "var(--ink)" }}>Coming soon</p>
       <p style={{ fontSize: "0.82rem", color: "var(--mid)", lineHeight: 1.65, maxWidth: 320, margin: "0 auto 20px" }}>
-        List your church or gathering space directly on Sanctuary. Reach verified buyers and track interest in real time.
+        List your church or gathering space directly on Nave. Reach verified buyers and track interest in real time.
       </p>
       <button style={{ fontSize: "0.82rem", fontWeight: 500, padding: "8px 20px", border: "1px solid var(--rule)", borderRadius: 100, background: "none", cursor: "pointer", color: "var(--ink)" }}>
         Join the waitlist
