@@ -28,30 +28,21 @@
     <!-- Canonical -->
     <link rel="canonical" href="https://nave.church" />
 
-    <!-- Favicons -->
-    <link rel="icon"             type="image/svg+xml" href="/nave-favicon.svg" />
-    <link rel="alternate icon"   type="image/png"     href="/nave-logo-black.png" />
-    <link rel="apple-touch-icon"                      href="/nave-logo-black.png" />
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=League+Script&display=swap" rel="stylesheet">
-
-    <!-- Schema.org -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Nave",
-      "description": "The UK's dedicated search for churches, chapels and sacred spaces",
-      "url": "https://nave.church",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://nave.church/?q={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
-    }
+    <!-- Favicons — switches with browser dark mode -->
+    <link id="favicon" rel="icon" type="image/svg+xml" href="/nave-favicon.svg" />
+    <link rel="apple-touch-icon" href="/nave-logo-black.png" />
+    <script>
+      (function() {
+        function setFavicon() {
+          var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var el = document.getElementById("favicon");
+          if (el) el.setAttribute("href", dark ? "/nave-favicon-white.svg" : "/nave-favicon.svg");
+        }
+        setFavicon();
+        if (window.matchMedia) {
+          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", setFavicon);
+        }
+      })();
     </script>
 
     <!-- Umami Analytics -->

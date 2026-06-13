@@ -27,12 +27,13 @@ function getBand(score: number): number {
 }
 
 export default function ResultsPage() {
+
+  const navigate = useNavigate();
+  const { query, results, intent, filters, page, sortBy, setResults, setPage, setSortBy } = useSearchStore();
   useSEO({
     title:       query ? `${query} — Search Results` : "Search Results",
     description: `Church and chapel properties matching "${query}" across the UK.`,
   });
-  const navigate = useNavigate();
-  const { query, results, intent, filters, page, sortBy, setResults, setPage, setSortBy } = useSearchStore();
 
   const mut = useMutation({
     mutationFn: () =>
