@@ -121,8 +121,8 @@ input, textarea, select { font-family: var(--font-body); }
 }
 .search-hero__title em::after {
   content: ''; position: absolute;
-  bottom: 2px; left: 0; right: 0;
-  height: 3px; background: var(--violet); border-radius: 2px;
+  bottom: 50px; left: 0; right: 0;
+  height: 3px; background: var(--violet); border-radius: 1px;
 }
 .search-hero__sub {
   font-size: 1rem; color: var(--mid);
@@ -1106,26 +1106,72 @@ html, body, #root {
   }
 }
 
-/* ── Mobile hero stacked layout ── */
-@media (max-width: 600px) {
+/* ── Mobile hero — stacked bold layout ── */
+@media (max-width: 400px) {
+  .search-hero {
+    padding: 10px 20px 10px;
+  }
+  .search-hero__eyebrow {
+    display: none;
+  }
   .search-hero__title {
-    display: block;
-    white-space: normal;
-    text-align: left;
+    text-align: left !important;
+    display: flex !important;
+    font-size: clamp(4rem, 24vw, 25rem) !important;
+    font-weight: 900 !important;
+    line-height: 0.6em!important;
+    white-space: normal !important;
+    letter-spacing: -0.05em;
+    flex-direction: column;
+    gap: 0;
   }
   .search-hero__title > span:first-child {
-    font-size: 0.45em;
-    font-weight: 700;
-    opacity: 0.6;
-    letter-spacing: 0.02em;
-    margin-bottom: 0.2em;
+    font-size: 0.16em;
+    font-weight: 600;
+    opacity: 0.75;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
     display: block;
+    margin-top: 2.0em;
+    margin-bottom: -4.9em;
+    align-self: flex-start;
     white-space: nowrap;
-  }
-  .hero-mobile-break {
-    display: block;
+    line-height: 0.9em;
   }
   .hero-mobile-stack {
+    display: block !important;
     text-align: left;
+    padding-left: 0 !important;
+    position: relative;
+    margin-top: -0.3em;
+  }
+  .hero-mobile-stack > em:first-child {
+    display: block;
+    text-align: right;
+    padding-right: 0.3em;
+    font-size: 0.4em;
+    line-height: 2;
+    margin-top: 0.6em;
+    margin-bottom: -0.75em;
+    opacity: 0.85;
+  }
+  .hero-mobile-break {
+    display: block !important;
+    position: relative;
+  }
+  .hero-mobile-break > em:first-child {
+    position: absolute;
+    left: -0.05em;
+    top: -0.2em;
+    font-size: 0.4em;
+    opacity: 0.85;
+  }
+  .hero-mobile-break > em + * ,
+  .hero-mobile-break > em ~ * {
+    padding-left: 0;
+  }
+  .search-hero__sub {
+    font-size: 0.78rem;
+    margin-bottom: 20px;
   }
 }

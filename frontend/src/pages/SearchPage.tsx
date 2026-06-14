@@ -165,18 +165,18 @@ export default function SearchPage() {
           <em style={{
             fontFamily:"'League Script', cursive",
             fontStyle:"normal",
-            fontSize:"1.1em",
-            lineHeight:0.9,
+            fontSize:"0.5em",
+            lineHeight:2.8,
             opacity:0.9,
             fontWeight:1000,
-            marginRight:"0.05em",
+            marginRight:"-0.75em",
           }}>for</em>churches,
           <span className="hero-mobile-break"> chapels,</span>
           <span className="hero-mobile-break">
             <em style={{
               fontFamily:"'League Script', cursive",
               fontStyle:"normal",
-              fontSize:"1.1em",
+              fontSize:"1.0em",
               fontWeight:1000,
               margin:"0 0.05em 0 0",
             }}>&amp;</em>sacred spaces
