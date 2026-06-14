@@ -110,8 +110,8 @@ input, textarea, select { font-family: var(--font-body); }
 }
 .search-hero__title {
   font-family: var(--font-display);
-  font-size: clamp(1.4rem, 3.8vw, 4rem);
-  font-weight: 900; line-height: 1.15;
+  font-size: clamp(1.8rem, 4.5vw, 5rem);
+  font-weight: 1000; line-height: 1.15;
   color: var(--ink); margin-bottom: 12px;
   letter-spacing: -.01em; max-width: 100%;
   white-space: nowrap;
@@ -135,7 +135,7 @@ input, textarea, select { font-family: var(--font-body); }
 .searchbar {
   width: 100%; display: flex; align-items: center;
   background: var(--white);
-  border: 1.5px solid var(--ink);
+  border: 0.5px solid var(--ink);
   border-radius: 100px;
   padding: clamp(6px,1.5vw,10px) clamp(6px,1.5vw,10px) clamp(6px,1.5vw,10px) clamp(12px,2.5vw,22px);
   gap: clamp(6px,1.5vw,10px);
@@ -946,27 +946,28 @@ html, body, #root {
   }
 
   /* Tags smaller */
-  .tag { font-size: 0.52rem; padding: 1px 4px; letter-spacing: .03em; }
+  .tag { font-size: 0.9rem; padding: 2px 6px; letter-spacing: .05em; }
 
   /* Search hero */
   .search-hero {
-    padding: 28px 12px 40px;
+    padding: 1px 1px 1px;
   }
   .search-hero__title {
-    font-size: clamp(0.85rem, 4.2vw, 1.6rem);
-    margin-bottom: 8px;
-    white-space: nowrap;
+    font-size: clamp(2.8rem, 12vw, 4.5rem);
+    white-space: normal;
+    text-align: left;
+    line-height: 1.0;
   }
   .search-hero__sub {
-    font-size: 0.8rem;
-    margin-bottom: 24px;
+    font-size: 0.85rem;
+    margin-bottom: 18px;
   }
 
   /* Search bar */
-  .searchbar { padding: 7px 7px 7px 14px; gap: 6px; }
+  .searchbar { padding: 2px 2px 2px 2px; gap: 3px; }
   .searchbar__input { font-size: 0.85rem; }
-  .btn-search { height: 30px; padding: 0 12px; font-size: 0.72rem; }
-  .btn-voice  { width: 28px; height: 28px; }
+  .btn-search { height: 10px; padding: 0 10px; font-size: 0.72rem; }
+  .btn-voice  { width: 24px; height: 24px; }
 
   /* Examples — hide when there are followup questions */
   .examples { gap: 5px; margin-top: 12px; }
@@ -1039,8 +1040,8 @@ html, body, #root {
   color: var(--ink);
   line-height: 1.5;
   padding: 0;
-  min-height: 24px;
-  max-height: 80px;
+  min-height: 8px;
+  max-height: 45px;
   resize: none;
 }
 
@@ -1062,31 +1063,69 @@ html, body, #root {
 .btn-search--searching  { background: var(--mid); color: #fff; cursor: wait; }
 .btn-search--follow_up  { background: var(--green, #2d7a4f); color: #fff; }
 
-/* ── Mobile search bar fix ── */
+/* ── Mobile search bar — single slim row ── */
 @media (max-width: 600px) {
+  .searchbar-wrap {
+    max-width: 100%;
+    padding: 0 12px;
+  }
   .searchbar--textarea {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 10px 12px;
-    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 8px 6px 14px;
+    gap: 6px;
+    border-width: 1px;
+    border-radius: 100px;
+    min-height: 0;
+  }
+  .searchbar--textarea .searchbar__input {
+    flex: 1;
+    min-height: 0;
+    max-height: 24px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
   .searchbar--textarea .searchbar__actions {
     display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    align-self: stretch;
-  }
-  .searchbar--textarea .searchbar__input {
-    width: 100%;
-    min-height: 40px;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
   }
   .btn-search {
-    height: 34px;
-    padding: 0 14px;
-    font-size: 0.8rem;
+    height: 26px;
+    padding: 0 10px;
+    font-size: 0.72rem;
+    border-radius: 100px;
   }
   .btn-voice {
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ── Mobile hero stacked layout ── */
+@media (max-width: 600px) {
+  .search-hero__title {
+    display: block;
+    white-space: normal;
+    text-align: left;
+  }
+  .search-hero__title > span:first-child {
+    font-size: 0.45em;
+    font-weight: 700;
+    opacity: 0.6;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.2em;
+    display: block;
+    white-space: nowrap;
+  }
+  .hero-mobile-break {
+    display: block;
+  }
+  .hero-mobile-stack {
+    text-align: left;
   }
 }

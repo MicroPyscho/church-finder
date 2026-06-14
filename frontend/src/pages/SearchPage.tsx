@@ -158,31 +158,36 @@ export default function SearchPage() {
 
   return (
     <div className="search-hero">
-      <p className="search-hero__eyebrow">Nave Property Search</p>
+      <p className="search-hero__eyebrow">UK's dedicated search</p>
       <h1 className="search-hero__title" style={{textAlign:"center",display:"inline-block",width:"100%"}}>
-        <span style={{display:"block"}}>UK's dedicated search</span>
-        <span style={{display:"block",paddingLeft:"0"}}>
+        <span style={{display:"block"}}>The UK's dedicated search</span>
+        <span className="hero-mobile-stack" style={{display:"block",paddingLeft:"3px"}}>
           <em style={{
             fontFamily:"'League Script', cursive",
-            fontStyle:"bold",
-            fontSize:"1.15em",
-            lineHeight:1,
+            fontStyle:"normal",
+            fontSize:"1.1em",
+            lineHeight:0.9,
             opacity:0.9,
-            fontWeight:600,
-            marginRight:"0.10em",
-          }}>for</em>churches, chapels <em style={{
-            fontFamily:"'League Script', cursive",
-            fontStyle:"bold",
-            fontSize:"1.15em",
-            fontWeight:600,
-            margin:"0 0.01em",
-          }}>&amp;</em> sacred spaces.
+            fontWeight:1000,
+            marginRight:"0.05em",
+          }}>for</em>churches,
+          <span className="hero-mobile-break"> chapels,</span>
+          <span className="hero-mobile-break">
+            <em style={{
+              fontFamily:"'League Script', cursive",
+              fontStyle:"normal",
+              fontSize:"1.1em",
+              fontWeight:1000,
+              margin:"0 0.05em 0 0",
+            }}>&amp;</em>sacred spaces
+          </span>
         </span>
       </h1>
+    
 
       {!showFollowUp && !edgeCase && (
         <p className="search-hero__sub">
-          Describe your need. We search 30+ sources.
+          Describe your search. See results from 30+ sources.
         </p>
       )}
 
@@ -193,7 +198,7 @@ export default function SearchPage() {
           <textarea
             ref={inputRef}
             className="searchbar__input"
-            placeholder="e.g. affordable church with parking, under £150k in Yorkshire…"
+            placeholder="e.g. churches under 250k for sale in London…"
             value={q}
             rows={1}
             onChange={e => {
@@ -211,8 +216,8 @@ export default function SearchPage() {
             style={{
               resize: "none",
               overflow: "hidden",
-              minHeight: 36,
-              maxHeight: 160,
+              minHeight: 8,
+              maxHeight: 45,
               lineHeight: "1.5",
             }}
           />
