@@ -42,7 +42,7 @@ export default function FavouritesPage() {
           </p>
           <button
             className="btn btn-black"
-            style={{ marginTop: 12, width: "100%", justifyContent: "center" }}
+            style={{ marginTop: 12, width: "100%", justifyContent: "center", textAlign: "center"}}
             onClick={() => bulkMut.mutate()}
             disabled={bulkMut.isPending}
           >

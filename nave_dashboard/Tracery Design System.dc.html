@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@font-face{font-family:'Familjen Grotesk';src:url('https://cdn.fontshare.com/wf/UVXGSXTMNKAI3KUNSVB6XC5HYWKGEU2J/4TA5XIRXUVBSX766VPY45UDG7NP4D2B4/FQZMTLU7HX6R67VFJWA76E3PI7EHZBYL.woff2') format('woff2');font-weight:400;font-display:swap;font-style:normal;}
+@font-face{font-family:'Familjen Grotesk';src:url('https://cdn.fontshare.com/wf/J5L6MR5SIECEL7IVPPAB3YI5RHMMTNAS/G3OS44PPX4IR6QD2RDPFLOJH7GMS3GWC/3ARL46TQXN3AW7XZQCNPKZRRIOFEBOPP.woff2') format('woff2');font-weight:500;font-display:swap;font-style:normal;}
+@font-face{font-family:'Familjen Grotesk';src:url('https://cdn.fontshare.com/wf/MKG5NM3LCOGCKDPN2Y5CF22LNOR36EWP/3UNRP7PPMCK436ZNHSLQEF5H5BRSRG7K/TCTGSFKMKNTNNCKNR4R2E7JO6KTMOGLA.woff2') format('woff2');font-weight:600;font-display:swap;font-style:normal;}
+@font-face{font-family:'Familjen Grotesk';src:url('https://cdn.fontshare.com/wf/72VS5DOL67VQCRGYDX5BRUEKY4AKKLXU/QKMQ5PSD6ZRHAUCB754VSHYVSQH3ESP6/NMWDK7GAM4H7S3USIJH5HPCBQ3LDUWTA.woff2') format('woff2');font-weight:700;font-display:swap;font-style:normal;}
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#0E1220;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  ::selection{background:rgba(238,132,52,.32);color:#fff;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(140,146,165,.32);border-radius:6px;}
+  .tc-root[data-tc-theme="dark"]{
+    --bg:#000000;--bg2:#14213d;--bg3:#1e3057;
+    --bd:rgba(229,229,229,.13);--bd2:rgba(229,229,229,.22);--bdg:rgba(238,132,52,.38);
+    --tx:#ffffff;--txd:#e5e5e5;--txf:#8791a6;--gold:#ee8434;
+    --glass:linear-gradient(157deg,rgba(229,229,229,.09),rgba(229,229,229,.025));
+    --glassbd:rgba(255,255,255,.2);--head:rgba(0,0,0,.72);
+    --mapbg:#05070f;--shadow:0 12px 38px rgba(0,0,0,.6);
+    --tilefx:saturate(1.05) brightness(.9) contrast(1.07);
+    --sky:radial-gradient(135% 120% at 50% -10%,#14213d 0%,#0a1120 48%,#000000 100%);
+  }
+  .tc-root[data-tc-theme="light"]{
+    --bg:#EFEADD;--bg2:#FBF8F1;--bg3:#FFFFFF;
+    --bd:rgba(45,34,16,.12);--bd2:rgba(45,34,16,.2);--bdg:rgba(194,90,31,.4);
+    --tx:#211E18;--txd:#5E5849;--txf:#928A77;--gold:#c25a1f;
+    --glass:linear-gradient(157deg,rgba(255,255,255,.78),rgba(255,255,255,.42));
+    --glassbd:rgba(255,255,255,.72);--head:rgba(245,241,232,.78);
+    --mapbg:#dde2e6;--shadow:0 14px 34px rgba(80,64,30,.15);
+    --tilefx:saturate(1.02);
+    --sky:radial-gradient(135% 120% at 50% -10%,#fbf8f1 0%,#efeadd 50%,#e6dfcd 100%);
+  }
+  @keyframes tcRise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  .leaflet-container{background:var(--mapbg)!important;font-family:system-ui,sans-serif;outline:none;}
+  .tc-root .leaflet-tile-pane{filter:var(--tilefx);}
+  .leaflet-bar{border:1px solid var(--bd)!important;box-shadow:var(--shadow)!important;border-radius:8px!important;overflow:hidden;}
+  .leaflet-bar a{background:var(--bg2)!important;color:var(--tx)!important;border-bottom:1px solid var(--bd)!important;}
+  .leaflet-bar a:hover{background:var(--bg3)!important;}
+  .leaflet-control-attribution{background:rgba(8,9,14,.5)!important;color:var(--txf)!important;font-size:9px!important;}
+  .leaflet-control-attribution a{color:var(--txd)!important;}
+  .tc-root[data-tc-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,.6)!important;}
+  .tc-region{transition:fill-opacity .25s,stroke-width .2s;cursor:pointer;}
+  .tc-root[data-tc-theme="light"] .tc-poster-map.leaflet-container{background:#e9edf0!important;}
+  .tc-root[data-tc-theme="dark"] .tc-poster-map.leaflet-container{background:#0d1017!important;}
+  /* no focus box on region select — colour highlight is the only indicator */
+  .tc-poster-map .leaflet-interactive:focus,.tc-poster-map path:focus,.tc-poster-map svg:focus,.tc-poster-map svg g:focus{outline:none!important;}
+  .tc-poster-map{cursor:grab;}
+  .tc-poster-map:active{cursor:grabbing;}
+  /* national plate: themed neutral base — silver by day, slate by night */
+  .tc-root[data-tc-theme="dark"] .tc-poster-map .leaflet-tile-pane{filter:grayscale(1) brightness(1.06) contrast(1.05);}
+  .tc-root[data-tc-theme="light"] .tc-poster-map .leaflet-tile-pane{filter:grayscale(1) brightness(1.02) contrast(1.12);}
+  .tc-root[data-tc-theme="dark"] .leaflet-overlay-pane svg{filter:drop-shadow(0 0 5px rgba(238,132,52,.22));}
+  .leaflet-tooltip.tc-tip{background:var(--bg2);border:1px solid var(--bdg);color:var(--tx);font-family:system-ui,sans-serif;font-size:11.5px;border-radius:6px;box-shadow:var(--shadow);padding:6px 10px;}
+  .leaflet-tooltip.tc-tip::before{display:none;}
+</style>
+</helmet>
+
+<template id="__bundler_thumbnail" data-bg-color="#000000">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#000000"></rect>
+    <g transform="translate(440,252) scale(10)" fill="#ee8434">
+      <path d="M20.91,14.4l-.85.79-.83-1.84c-.57-.97-.84-1.07-.95-1.16-.4-.36-.76-.69-1.57-.88l-2.26-.22.94-.83,1.07.04c.31.01.62.05.92.14.56.16.81.3,1.17.54.53.36.78.63,1.22,1.14.32.38.6.97.83,1.41l.3.87Z"></path>
+      <path d="M19.79,11.13l-.64.2c-.48.15-.71.45-1.14.72-.4.24-.89,1.38-.91,1.41l-1.27-.83s.52-.92.85-1.21c.47-.43,1.02-.78,1.62-1.08.44-.22,1.49.79,1.49.79Z"></path>
+      <path d="M14.33.31C6.03.31,0,6.76,0,15.59s5.54,13.94,13.42,13.94h18.58V0s-14.15.31-17.67.31ZM15.65,21.55c-3.7,0-6.96-1.9-6.96-6.14s2.62-6.6,7.02-6.6c3.94,0,6.75,2.06,6.75,6.48,0,4.18-3.04,6.26-6.81,6.26ZM22,9.15c-1.08,0-1.96-.82-1.96-1.84s.88-1.84,1.96-1.84,1.96.82,1.96,1.84-.88,1.84-1.96,1.84Z"></path>
+    </g>
+  </svg>
+</template>
+<div class="tc-root" data-tc-theme="{{ theme }}" style="font-family:'Satoshi',-apple-system,system-ui,sans-serif;color:var(--tx);background:var(--bg);min-height:100vh;">
+
+  <!-- ════ NAV ════ -->
+  <header style="position:sticky;top:0;z-index:1200;backdrop-filter:saturate(150%) blur(18px);-webkit-backdrop-filter:saturate(150%) blur(18px);background:var(--head);border-bottom:1px solid var(--bdg);">
+    <div style="max-width:1180px;margin:0 auto;padding:0 clamp(18px,4vw,40px);height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span aria-label="nave" role="img" style="display:inline-flex;color:var(--tx);flex-shrink:0;"><svg style="height:18px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660.23 154.29"><path d="M101.23,2.59c15.55,0,30.43,5.15,40.24,13.62,10.48,9.68,14.2,21.19,14.2,46v88.51h-51.39l-2.23-88.21c0-13.62-11.47-21.79-24.65-21.79s-24.99,10.78-24.99,24.4v85.6H1V52.74C1,27.15,22.25,2.54,50.84,3.06c16.23.29,42.98-.47,50.38-.47Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M271.03,72.88l-4.3,3.99-4.22-9.31c-2.91-4.9-4.25-5.4-4.8-5.89-2.03-1.81-3.85-3.52-7.97-4.48l-11.44-1.14,4.78-4.2,5.44.21c1.58.06,3.15.28,4.67.7,2.85.79,4.12,1.51,5.94,2.75,2.68,1.83,3.96,3.21,6.17,5.79,1.63,1.91,3.06,4.92,4.22,7.15l1.52,4.43Z" fill="currentColor"></path><path d="M265.4,56.33l-3.25,1c-2.44.75-3.58,2.3-5.76,3.63-2.02,1.23-4.52,7.02-4.61,7.15l-6.42-4.2s2.65-4.64,4.28-6.12c2.41-2.18,5.16-3.93,8.19-5.47,2.24-1.14,7.56,4,7.56,4Z" fill="currentColor"></path><path d="M236.42,2.59c-42.07,0-72.64,32.69-72.64,77.48s28.09,70.65,68.04,70.65h94.18V1.02s-71.73,1.57-89.58,1.57ZM243.1,110.29c-18.76,0-35.29-9.64-35.29-31.13s13.26-33.44,35.59-33.44c19.98,0,34.2,10.44,34.2,32.84,0,21.18-15.43,31.73-34.5,31.73ZM275.32,47.42c-5.47,0-9.92-4.18-9.92-9.32s4.45-9.33,9.92-9.33,9.93,4.18,9.93,9.33-4.45,9.32-9.93,9.32Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M533.33,4.72c.25-.84-104.39,122.38-112.3,129.21-16.19,13.98-23.41,19.01-41.02,19.37h-10.18c-19.75,0-35.75-16.02-35.72-35.77l.15-114.36h55.12l-.06,78.09c0,5.36,6.46,12.58,16,1.23L471.87,4.72h61.46Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M552,89.07c3.33,15.74,14.67,20.14,31.31,20.14,12.41,0,20.16-4.95,25-14.94l49.97.72c-.56,9.04-4.84,26.08-26.16,41.04-5.51,3.87-19.82,16.27-49.97,16.27-45.7,0-83.68-29.33-83.68-73.82S536.36,2.72,581.75,2.72s77.48,32.78,77.48,80.59v5.75h-107.23ZM609.32,61.55c-3.03-14.53-10.92-19.7-27.26-19.7s-25.33,5.17-28.36,19.7h55.62Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path></svg></span>
+        <span style="font-size:11px;letter-spacing:.04em;color:var(--txf);padding:3px 9px;border:1px solid var(--bd);border-radius:999px;">v0.1 · alpha</span>
+      </div>
+      <nav style="display:flex;align-items:center;gap:clamp(10px,2vw,26px);">
+        <a href="#plates" style="text-decoration:none;color:var(--txd);font-size:13px;" style-hover="color:var(--tx);">Plates</a>
+        <a href="#color" style="text-decoration:none;color:var(--txd);font-size:13px;" style-hover="color:var(--tx);">Color</a>
+        <a href="#type" style="text-decoration:none;color:var(--txd);font-size:13px;" style-hover="color:var(--tx);">Type</a>
+        <a href="#components" style="text-decoration:none;color:var(--txd);font-size:13px;" style-hover="color:var(--tx);">Components</a>
+        <a href="#map" style="text-decoration:none;color:var(--txd);font-size:13px;" style-hover="color:var(--tx);">Map</a>
+        <button onClick="{{ toggleTheme }}" title="Toggle appearance" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx);font-size:14px;line-height:1;" style-hover="border-color:var(--bdg);">{{ themeIcon }}</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ════ HERO ════ -->
+  <section style="position:relative;background:var(--sky);overflow:hidden;border-bottom:1px solid var(--bd);">
+    <!-- stained-glass lancet band -->
+    <div style="position:absolute;inset:0;display:flex;gap:3px;opacity:.12;pointer-events:none;">
+      <span style="flex:1;background:linear-gradient(180deg,#a20021,transparent);"></span>
+      <span style="flex:1;background:linear-gradient(180deg,#f3752b,transparent);"></span>
+      <span style="flex:1;background:linear-gradient(180deg,#ee8434,transparent);"></span>
+      <span style="flex:1;background:linear-gradient(180deg,#717ec3,transparent);"></span>
+      <span style="flex:1;background:linear-gradient(180deg,#496ddb,transparent);"></span>
+      <span style="flex:1;background:linear-gradient(180deg,#c95d63,transparent);"></span>
+      <span style="flex:1;background:linear-gradient(180deg,#f52f57,transparent);"></span>
+    </div>
+    <div style="position:relative;max-width:1180px;margin:0 auto;padding:clamp(48px,7vw,92px) clamp(18px,4vw,40px) clamp(30px,4vw,52px);animation:tcRise .7s cubic-bezier(.16,1,.3,1) both;">
+      <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin:0 0 18px;">A Stained-Glass Design System</p>
+      <h1 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:700;font-size:clamp(36px,6vw,72px);line-height:1.02;letter-spacing:-.01em;margin:0;max-width:14ch;text-wrap:balance;">Light through leaded glass, for public maps.</h1>
+      <p style="font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:var(--txd);max-width:62ch;margin:22px 0 0;text-wrap:pretty;">Nave dresses Apple's calm, glass-panelled structure in the jewel palette of a cathedral window — a token set and component kit for public, interactive geospatial dashboards built on OpenStreetMap, GeoJSON, choropleth and Leaflet.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:26px;">
+        <span style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--txd);"><span style="width:7px;height:7px;border-radius:50%;background:#717ec3;"></span>OpenStreetMap</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--txd);"><span style="width:7px;height:7px;border-radius:50%;background:#a20021;"></span>GeoJSON</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--txd);"><span style="width:7px;height:7px;border-radius:50%;background:#ee8434;"></span>Choropleth</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--txd);"><span style="width:7px;height:7px;border-radius:50%;background:#496ddb;"></span>Leaflet</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--txd);"><span style="width:7px;height:7px;border-radius:50%;background:#f52f57;"></span>Apple HIG structure</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ CITY PLATES · terraink-style single-hue posters ════ -->
+  <section id="plates" style="max-width:1180px;margin:0 auto;padding:clamp(40px,5vw,68px) clamp(18px,4vw,40px) 0;scroll-margin-top:80px;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin:0 0 6px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);white-space:nowrap;">Map Plates</span></div>
+    <h2 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(24px,3.2vw,34px);margin:0 0 6px;letter-spacing:-.01em;">Single-hue city posters</h2>
+    <p style="font-size:15px;line-height:1.6;color:var(--txd);max-width:64ch;margin:0 0 22px;">Every glass hue tints a live OpenStreetMap plate — one colour, edge to edge. The print-style frame, wide-tracked place name and decimal coordinates are tokens too. Step through UK cities below.</p>
+
+    <div style="position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--bd);box-shadow:var(--shadow);height:clamp(440px,62vh,640px);background:{{ plateBg }};">
+      <!-- filtered live map -->
+      <div ref="{{ setPlateHost }}" style="position:absolute;inset:0;filter:{{ plateFilter }};transition:filter .6s ease;"></div>
+
+      <!-- top + bottom scrims for legibility -->
+      <div style="position:absolute;inset:0;pointer-events:none;background:{{ plateScrim }};"></div>
+      <!-- fine inner frame line, like a print border -->
+      <div style="position:absolute;inset:14px;pointer-events:none;border:1px solid {{ plateLine }};border-radius:8px;"></div>
+
+      <!-- arrows -->
+      <button onClick="{{ prevPlate }}" aria-label="Previous city" style="position:absolute;left:18px;top:50%;transform:translateY(-50%);z-index:30;width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.18);" style-hover="background:rgba(255,255,255,.92);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <button onClick="{{ nextPlate }}" aria-label="Next city" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:30;width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.18);" style-hover="background:rgba(255,255,255,.92);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+
+      <!-- title block, centered low like terraink -->
+      <div style="position:absolute;left:0;right:0;bottom:54px;z-index:20;text-align:center;padding:0 60px;pointer-events:none;">
+        <h3 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(34px,6.4vw,74px);line-height:1;letter-spacing:.16em;margin:0;color:{{ plateColor }};text-indent:.16em;">{{ plateName }}</h3>
+        <div style="width:148px;height:1.5px;background:{{ plateColor }};opacity:.7;margin:18px auto 14px;"></div>
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:clamp(13px,1.5vw,16px);letter-spacing:.32em;text-transform:uppercase;margin:0;color:{{ plateColor }};text-indent:.32em;">{{ plateCountry }}</p>
+        <p style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:12.5px;letter-spacing:.12em;margin:12px 0 0;color:{{ plateColor }};opacity:.78;">{{ plateCoords }}</p>
+      </div>
+
+      <!-- corner attributions -->
+      <span style="position:absolute;left:24px;bottom:18px;z-index:20;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;color:{{ plateColor }};opacity:.6;">© nave.systems</span>
+      <span style="position:absolute;right:24px;bottom:18px;z-index:20;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;color:{{ plateColor }};opacity:.6;">© OpenStreetMap contributors</span>
+
+      <!-- dots -->
+      <div style="position:absolute;left:0;right:0;bottom:18px;z-index:20;display:flex;justify-content:center;gap:9px;">
+        <sc-for list="{{ plateDots }}" as="d" hint-placeholder-count="8">
+          <button onClick="{{ d.go }}" aria-label="Go to plate" style="width:{{ d.size }};height:8px;border-radius:999px;border:none;cursor:pointer;padding:0;background:{{ d.bg }};transition:width .25s,background .25s;"></button>
+        </sc-for>
+      </div>
+    </div>
+    <p style="font-size:11.5px;color:var(--txf);margin:10px 0 0;font-family:ui-monospace,SFMono-Regular,monospace;">L.tileLayer(positron_nolabels) · CSS filter: grayscale → sepia → hue-rotate → saturate · one hue per plate</p>
+  </section>
+
+  <!-- ════ INTERACTIVE NATIONAL PLATE · single-hue choropleth poster ════ -->
+  <section id="map" style="max-width:1180px;margin:0 auto;padding:clamp(40px,5vw,68px) clamp(18px,4vw,40px) 0;scroll-margin-top:80px;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin:0 0 8px;">
+      <span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);">The System, Assembled</span>
+    </div>
+    <h2 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(24px,3.2vw,34px);margin:0 0 6px;letter-spacing:-.01em;">An interactive national plate</h2>
+    <p style="font-size:15px;line-height:1.6;color:var(--txd);max-width:64ch;margin:0 0 22px;">The full poster treatment over a live Leaflet choropleth. Hover any region to light its glass and trace its border; toggle category against density. One hue, edge to edge — on real OpenStreetMap tiles and GeoJSON.</p>
+
+    <div style="position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--bd);box-shadow:var(--shadow);height:clamp(480px,66vh,680px);background:{{ posterBg }};">
+      <!-- live single-hue map (tiles tinted via tile-pane filter; choropleth overlay stays vivid) -->
+      <div ref="{{ setMapHost }}" class="tc-poster-map" style="position:absolute;inset:0;"></div>
+
+      <!-- print scrim + frame -->
+      <div style="position:absolute;inset:0;pointer-events:none;z-index:380;background:{{ posterScrim }};"></div>
+      <div style="position:absolute;inset:14px;pointer-events:none;z-index:381;border:1px solid {{ posterLine }};border-radius:8px;"></div>
+
+      <!-- English-only sea label, set over the North Sea -->
+      <span style="position:absolute;top:30%;right:11%;z-index:386;pointer-events:none;font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:clamp(13px,1.5vw,17px);font-weight:500;letter-spacing:.42em;text-transform:uppercase;color:{{ posterColor }};opacity:.5;transform:rotate(-6deg);text-indent:.42em;">North Sea</span>
+
+      <!-- masthead title, top-left -->
+      <div style="position:absolute;top:24px;left:26px;z-index:400;max-width:340px;pointer-events:none;">
+        <span aria-label="nave" role="img" style="display:block;margin:0 0 13px;color:{{ posterColor }};"><svg style="height:15px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660.23 154.29"><path d="M101.23,2.59c15.55,0,30.43,5.15,40.24,13.62,10.48,9.68,14.2,21.19,14.2,46v88.51h-51.39l-2.23-88.21c0-13.62-11.47-21.79-24.65-21.79s-24.99,10.78-24.99,24.4v85.6H1V52.74C1,27.15,22.25,2.54,50.84,3.06c16.23.29,42.98-.47,50.38-.47Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M271.03,72.88l-4.3,3.99-4.22-9.31c-2.91-4.9-4.25-5.4-4.8-5.89-2.03-1.81-3.85-3.52-7.97-4.48l-11.44-1.14,4.78-4.2,5.44.21c1.58.06,3.15.28,4.67.7,2.85.79,4.12,1.51,5.94,2.75,2.68,1.83,3.96,3.21,6.17,5.79,1.63,1.91,3.06,4.92,4.22,7.15l1.52,4.43Z" fill="currentColor"></path><path d="M265.4,56.33l-3.25,1c-2.44.75-3.58,2.3-5.76,3.63-2.02,1.23-4.52,7.02-4.61,7.15l-6.42-4.2s2.65-4.64,4.28-6.12c2.41-2.18,5.16-3.93,8.19-5.47,2.24-1.14,7.56,4,7.56,4Z" fill="currentColor"></path><path d="M236.42,2.59c-42.07,0-72.64,32.69-72.64,77.48s28.09,70.65,68.04,70.65h94.18V1.02s-71.73,1.57-89.58,1.57ZM243.1,110.29c-18.76,0-35.29-9.64-35.29-31.13s13.26-33.44,35.59-33.44c19.98,0,34.2,10.44,34.2,32.84,0,21.18-15.43,31.73-34.5,31.73ZM275.32,47.42c-5.47,0-9.92-4.18-9.92-9.32s4.45-9.33,9.92-9.33,9.93,4.18,9.93,9.33-4.45,9.32-9.93,9.32Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M533.33,4.72c.25-.84-104.39,122.38-112.3,129.21-16.19,13.98-23.41,19.01-41.02,19.37h-10.18c-19.75,0-35.75-16.02-35.72-35.77l.15-114.36h55.12l-.06,78.09c0,5.36,6.46,12.58,16,1.23L471.87,4.72h61.46Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M552,89.07c3.33,15.74,14.67,20.14,31.31,20.14,12.41,0,20.16-4.95,25-14.94l49.97.72c-.56,9.04-4.84,26.08-26.16,41.04-5.51,3.87-19.82,16.27-49.97,16.27-45.7,0-83.68-29.33-83.68-73.82S536.36,2.72,581.75,2.72s77.48,32.78,77.48,80.59v5.75h-107.23ZM609.32,61.55c-3.03-14.53-10.92-19.7-27.26-19.7s-25.33,5.17-28.36,19.7h55.62Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path></svg></span>
+        <h3 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(21px,2.6vw,32px);line-height:1.04;letter-spacing:.01em;margin:0;color:{{ posterColor }};text-wrap:balance;">Where Went the Churches?</h3>
+        <div style="width:54px;height:2px;background:{{ posterColor }};opacity:.7;margin:11px 0 9px;"></div>
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.26em;text-transform:uppercase;margin:0;color:{{ posterColor }};opacity:.82;">A live national atlas · UK</p>
+      </div>
+
+      <!-- restored metric chart, left column -->
+      <div style="position:absolute;top:138px;left:24px;width:230px;z-index:420;background:var(--glass);backdrop-filter:saturate(160%) blur(22px);-webkit-backdrop-filter:saturate(160%) blur(22px);border:1px solid var(--glassbd);border-radius:18px;padding:16px 18px 14px;box-shadow:var(--shadow);">
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:700;font-size:25px;color:var(--tx);letter-spacing:-.01em;">{{ metricValue }}</span>
+          <span style="font-size:11px;font-weight:600;color:#fff;background:#717ec3;border-radius:6px;padding:2px 6px;">{{ metricDelta }}</span>
+        </div>
+        <p style="font-size:11px;color:var(--txd);margin:5px 0 0;">{{ metricLabel }}</p>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:48px;margin-top:13px;">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="12">
+            <span style="flex:1;height:{{ b.h }};background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--txf);margin-top:7px;"><span>North East</span><span>by region</span><span>Scotland</span></div>
+      </div>
+
+      <!-- live hover card, top-right -->
+      <div style="position:absolute;top:22px;right:22px;width:232px;z-index:520;background:var(--glass);backdrop-filter:saturate(160%) blur(22px);-webkit-backdrop-filter:saturate(160%) blur(22px);border:1px solid var(--glassbd);border-radius:18px;padding:16px 18px;box-shadow:var(--shadow);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--txf);margin:0 0 4px;">{{ hoverKicker }}</p>
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:19px;color:var(--tx);margin:0 0 12px;line-height:1.15;">{{ hoverName }}</p>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="width:10px;height:10px;border-radius:3px;background:{{ hoverColor }};flex-shrink:0;box-shadow:0 0 8px {{ hoverColor }};"></span>
+          <span style="font-size:12.5px;color:var(--txd);">{{ hoverCat }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--txf);">Conversion index</span>
+          <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--tx);">{{ hoverIndex }}</span>
+        </div>
+        <div style="height:7px;border-radius:999px;background:rgba(127,127,127,.2);overflow:hidden;">
+          <div style="height:100%;width:{{ hoverBar }};background:linear-gradient(90deg,var(--gold),#f79d5c);border-radius:999px;transition:width .35s ease;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;">
+          <span style="font-size:11px;color:var(--txf);">Sites mapped</span>
+          <span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:16px;color:var(--tx);font-variant-numeric:tabular-nums;">{{ hoverSites }}</span>
+        </div>
+      </div>
+
+      <!-- zoom control, bottom-right above mode toggle -->
+      <div style="position:absolute;bottom:64px;right:24px;z-index:520;display:flex;flex-direction:column;background:var(--glass);backdrop-filter:saturate(160%) blur(20px);-webkit-backdrop-filter:saturate(160%) blur(20px);border:1px solid var(--glassbd);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);">
+        <button onClick="{{ zoomIn }}" aria-label="Zoom in" style="width:38px;height:36px;border:none;border-bottom:1px solid var(--glassbd);background:transparent;cursor:pointer;color:var(--tx);font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="background:rgba(127,127,127,.16);">+</button>
+        <button onClick="{{ zoomOut }}" aria-label="Zoom out" style="width:38px;height:36px;border:none;background:transparent;cursor:pointer;color:var(--tx);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="background:rgba(127,127,127,.16);">−</button>
+      </div>
+
+      <!-- mode toggle, bottom-right on glass -->
+      <div style="position:absolute;bottom:20px;right:24px;z-index:520;display:inline-flex;background:var(--glass);backdrop-filter:saturate(160%) blur(20px);-webkit-backdrop-filter:saturate(160%) blur(20px);border:1px solid var(--glassbd);border-radius:999px;padding:3px;box-shadow:var(--shadow);">
+        <sc-for list="{{ mapTabs }}" as="t" hint-placeholder-count="2">
+          <button onClick="{{ t.go }}" style="background:{{ t.bg }};border:none;border-radius:999px;padding:7px 16px;cursor:pointer;color:{{ t.color }};font-size:12.5px;font-weight:600;transition:background .2s;">{{ t.label }}</button>
+        </sc-for>
+      </div>
+
+      <!-- legend, bottom-left -->
+      <div style="position:absolute;bottom:18px;left:22px;z-index:420;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glassbd);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);">
+        <p style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--txf);margin:0 0 8px;">{{ legendTitle }}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:7px 14px;max-width:300px;">
+          <sc-for list="{{ legend }}" as="g" hint-placeholder-count="8">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--txd);"><span style="width:13px;height:8px;border-radius:2px;background:{{ g.color }};"></span>{{ g.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- centered attribution -->
+      <span style="position:absolute;left:0;right:0;bottom:6px;text-align:center;z-index:420;font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em;color:{{ posterColor }};opacity:.55;">© OpenStreetMap contributors</span>
+    </div>
+    <p style="font-size:11.5px;color:var(--txf);margin:10px 0 0;font-family:ui-monospace,SFMono-Regular,monospace;">L.geoJSON(eer.json) · hover → setStyle + marching-ants trace · tile-pane CSS filter → single hue</p>
+  </section>
+
+  <!-- ════ 01 · COLOR ════ -->
+  <section id="color" style="max-width:1180px;margin:0 auto;padding:clamp(44px,6vw,80px) clamp(18px,4vw,40px) 0;scroll-margin-top:80px;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin:0 0 6px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);">01</span><h2 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(24px,3.2vw,34px);margin:0;letter-spacing:-.01em;">Color</h2></div>
+    <p style="font-size:15px;line-height:1.6;color:var(--txd);max-width:64ch;margin:0 0 26px;">Eight glass hues drawn from leaded windows carry categorical meaning across maps, markers and charts. Gold is the leading — the framing metal — in daylight; Orange takes that role at night. Either way it is the system's single accent.</p>
+
+    <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 14px;">Glass · categorical palette</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-bottom:40px;">
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#ee8434;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Tangerine · leading</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.tangerine · #ee8434</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#f3752b;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Pumpkin</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.pumpkin · #f3752b</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#a20021;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Ruby</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.ruby · #a20021</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#f52f57;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Fuchsia</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.fuchsia · #f52f57</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#c95d63;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Lobster</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.lobster · #c95d63</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#ae8799;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Mauve · null</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.mauve · #ae8799</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#496ddb;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Royal</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.royal · #496ddb</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:9px;"><div style="height:88px;border-radius:13px;background:#717ec3;border:1px solid var(--bd);box-shadow:var(--shadow);"></div><div><span style="display:block;font-size:13px;font-weight:600;">Glaucous</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);">glass.glaucous · #717ec3</span></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px;margin-bottom:40px;">
+      <div>
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 14px;">Night-glass · dark surfaces</p>
+        <div style="display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:13px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#000000;border-bottom:1px solid rgba(255,255,255,.08);"><span style="width:26px;height:26px;border-radius:7px;background:#000000;border:1px solid rgba(255,255,255,.15);"></span><span style="flex:1;font-size:13px;color:#ECEAF0;">Page</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8791a6;">bg · #000000</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#14213d;border-bottom:1px solid rgba(255,255,255,.08);"><span style="width:26px;height:26px;border-radius:7px;background:#14213d;border:1px solid rgba(255,255,255,.15);"></span><span style="flex:1;font-size:13px;color:#ECEAF0;">Surface · Prussian</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8791a6;">bg2 · #14213D</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#1e3057;"><span style="width:26px;height:26px;border-radius:7px;background:#1e3057;border:1px solid rgba(255,255,255,.15);"></span><span style="flex:1;font-size:13px;color:#ECEAF0;">Raised</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8791a6;">bg3 · #1E3057</span></div>
+        </div>
+      </div>
+      <div>
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 14px;">Limestone · light surfaces</p>
+        <div style="display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:13px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#EFEADD;border-bottom:1px solid rgba(45,34,16,.1);"><span style="width:26px;height:26px;border-radius:7px;background:#EFEADD;border:1px solid rgba(45,34,16,.18);"></span><span style="flex:1;font-size:13px;color:#211E18;">Page</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#928A77;">bg · #EFEADD</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#FBF8F1;border-bottom:1px solid rgba(45,34,16,.1);"><span style="width:26px;height:26px;border-radius:7px;background:#FBF8F1;border:1px solid rgba(45,34,16,.18);"></span><span style="flex:1;font-size:13px;color:#211E18;">Surface</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#928A77;">bg2 · #FBF8F1</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:#FFFFFF;"><span style="width:26px;height:26px;border-radius:7px;background:#FFFFFF;border:1px solid rgba(45,34,16,.18);"></span><span style="flex:1;font-size:13px;color:#211E18;">Raised</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#928A77;">bg3 · #FFFFFF</span></div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 14px;">Choropleth ramps</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;">
+      <div>
+        <span style="display:block;font-size:13px;font-weight:600;margin-bottom:9px;">Sequential · density</span>
+        <div style="display:flex;height:38px;border-radius:9px;overflow:hidden;border:1px solid var(--bd);">
+          <span style="flex:1;background:#3a1c08;"></span><span style="flex:1;background:#7a3d12;"></span><span style="flex:1;background:#b35d1f;"></span><span style="flex:1;background:#ee8434;"></span><span style="flex:1;background:#f79d5c;"></span>
+        </div>
+        <span style="display:block;font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);margin-top:7px;">low → high · single-hue tangerine</span>
+      </div>
+      <div>
+        <span style="display:block;font-size:13px;font-weight:600;margin-bottom:9px;">Diverging · change</span>
+        <div style="display:flex;height:38px;border-radius:9px;overflow:hidden;border:1px solid var(--bd);">
+          <span style="flex:1;background:#a20021;"></span><span style="flex:1;background:#d07a83;"></span><span style="flex:1;background:#ededf4;"></span><span style="flex:1;background:#8f9fe4;"></span><span style="flex:1;background:#496ddb;"></span>
+        </div>
+        <span style="display:block;font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);margin-top:7px;">ruby ← ghost → royal</span>
+      </div>
+      <div>
+        <span style="display:block;font-size:13px;font-weight:600;margin-bottom:9px;">Categorical · type</span>
+        <div style="display:flex;height:38px;border-radius:9px;overflow:hidden;border:1px solid var(--bd);">
+          <span style="flex:1;background:#ee8434;"></span><span style="flex:1;background:#f3752b;"></span><span style="flex:1;background:#a20021;"></span><span style="flex:1;background:#f52f57;"></span><span style="flex:1;background:#c95d63;"></span><span style="flex:1;background:#ae8799;"></span><span style="flex:1;background:#496ddb;"></span><span style="flex:1;background:#717ec3;"></span>
+        </div>
+        <span style="display:block;font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);margin-top:7px;">eight glass hues</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ 02 · TYPOGRAPHY ════ -->
+  <section id="type" style="max-width:1180px;margin:0 auto;padding:clamp(44px,6vw,80px) clamp(18px,4vw,40px) 0;scroll-margin-top:80px;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin:0 0 6px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);">02</span><h2 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(24px,3.2vw,34px);margin:0;letter-spacing:-.01em;">Typography</h2></div>
+    <p style="font-size:15px;line-height:1.6;color:var(--txd);max-width:64ch;margin:0 0 26px;">Familjen Grotesk — a contemporary geometric grotesque — sets display and section headers. Satoshi, its quieter companion, carries every interface and body text for clean, Apple-native legibility. A monospace holds data and tokens.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;">
+      <div style="border:1px solid var(--bd);border-radius:13px;padding:20px;background:var(--bg2);"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:38px;">Ag</span><p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:13px;color:var(--txd);margin:8px 0 0;">Familjen Grotesk · Display</p><p style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);margin:2px 0 0;">font.display</p></div>
+      <div style="border:1px solid var(--bd);border-radius:13px;padding:20px;background:var(--bg2);"><span style="font-size:38px;font-weight:600;">Ag</span><p style="font-size:13px;color:var(--txd);margin:8px 0 0;">Satoshi · Interface</p><p style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);margin:2px 0 0;">font.sans</p></div>
+      <div style="border:1px solid var(--bd);border-radius:13px;padding:20px;background:var(--bg2);"><span style="font-family:ui-monospace,monospace;font-size:38px;">Ag</span><p style="font-size:13px;color:var(--txd);margin:8px 0 0;">Monospace · Data</p><p style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);margin:2px 0 0;">font.mono</p></div>
+    </div>
+
+    <div style="border:1px solid var(--bd);border-radius:14px;overflow:hidden;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd);"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:700;font-size:clamp(28px,4vw,48px);line-height:1;letter-spacing:-.01em;">The quick brown fox</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);white-space:nowrap;">display · 48 / 700</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd);"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:28px;">Section heading</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);white-space:nowrap;">title · 28 / 600</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd);"><span style="font-size:20px;font-weight:600;">Panel title &amp; card heading</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);white-space:nowrap;">heading · 20 / 600</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd);"><span style="font-size:17px;font-weight:400;color:var(--txd);">Body copy reads at seventeen pixels, generous and calm in the Apple manner.</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);white-space:nowrap;">body · 17 / 400</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--bd);"><span style="font-size:13px;font-weight:500;color:var(--txd);">Interface label and control text</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);white-space:nowrap;">label · 13 / 500</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 22px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);">Eyebrow · Overline</span><span style="font-family:ui-monospace,monospace;font-size:11.5px;color:var(--txf);white-space:nowrap;">overline · 11 / .2em</span></div>
+    </div>
+  </section>
+
+  <!-- ════ 03 · FOUNDATIONS ════ -->
+  <section style="max-width:1180px;margin:0 auto;padding:clamp(44px,6vw,80px) clamp(18px,4vw,40px) 0;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin:0 0 6px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);">03</span><h2 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(24px,3.2vw,34px);margin:0;letter-spacing:-.01em;">Space, shape &amp; depth</h2></div>
+    <p style="font-size:15px;line-height:1.6;color:var(--txd);max-width:64ch;margin:0 0 26px;">A 4-point spacing grid, soft Apple radii, and elevation that leans on frosted glass before shadow.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;">
+      <!-- spacing -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:20px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Spacing · 4pt</p>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;align-items:center;gap:12px;"><span style="height:10px;width:4px;background:var(--gold);border-radius:2px;"></span><span style="font-family:ui-monospace,monospace;font-size:12px;color:var(--txd);">4 · xs</span></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="height:10px;width:8px;background:var(--gold);border-radius:2px;"></span><span style="font-family:ui-monospace,monospace;font-size:12px;color:var(--txd);">8 · sm</span></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="height:10px;width:16px;background:var(--gold);border-radius:2px;"></span><span style="font-family:ui-monospace,monospace;font-size:12px;color:var(--txd);">16 · md</span></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="height:10px;width:24px;background:var(--gold);border-radius:2px;"></span><span style="font-family:ui-monospace,monospace;font-size:12px;color:var(--txd);">24 · lg</span></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="height:10px;width:32px;background:var(--gold);border-radius:2px;"></span><span style="font-family:ui-monospace,monospace;font-size:12px;color:var(--txd);">32 · xl</span></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="height:10px;width:48px;background:var(--gold);border-radius:2px;"></span><span style="font-family:ui-monospace,monospace;font-size:12px;color:var(--txd);">48 · 2xl</span></div>
+        </div>
+      </div>
+      <!-- radius -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:20px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Radius</p>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;">
+          <div style="text-align:center;"><span style="display:block;width:56px;height:56px;background:var(--bg3);border:1px solid var(--bd2);border-radius:8px;"></span><span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);display:block;margin-top:6px;">8 ctrl</span></div>
+          <div style="text-align:center;"><span style="display:block;width:56px;height:56px;background:var(--bg3);border:1px solid var(--bd2);border-radius:14px;"></span><span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);display:block;margin-top:6px;">14 card</span></div>
+          <div style="text-align:center;"><span style="display:block;width:56px;height:56px;background:var(--bg3);border:1px solid var(--bd2);border-radius:18px;"></span><span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);display:block;margin-top:6px;">18 glass</span></div>
+          <div style="text-align:center;"><span style="display:block;width:56px;height:56px;background:var(--bg3);border:1px solid var(--bd2);border-radius:999px;"></span><span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);display:block;margin-top:6px;">pill</span></div>
+        </div>
+      </div>
+      <!-- elevation + glass -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:20px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Elevation &amp; glass</p>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="height:40px;border-radius:10px;background:var(--bg3);border:1px solid var(--bd);box-shadow:0 2px 6px rgba(0,0,0,.18);display:flex;align-items:center;padding:0 14px;font-size:12px;color:var(--txd);">Raised · subtle</div>
+          <div style="height:40px;border-radius:10px;background:var(--bg3);box-shadow:0 12px 38px rgba(0,0,0,.4);display:flex;align-items:center;padding:0 14px;font-size:12px;color:var(--txd);">Overlay · popover</div>
+          <div style="height:40px;border-radius:10px;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glassbd);display:flex;align-items:center;padding:0 14px;font-size:12px;color:var(--tx);">Glass · frosted panel</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ 04 · COMPONENTS ════ -->
+  <section id="components" style="max-width:1180px;margin:0 auto;padding:clamp(44px,6vw,80px) clamp(18px,4vw,40px) 0;scroll-margin-top:80px;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin:0 0 6px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);">04</span><h2 style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:600;font-size:clamp(24px,3.2vw,34px);margin:0;letter-spacing:-.01em;">Components</h2></div>
+    <p style="font-size:15px;line-height:1.6;color:var(--txd);max-width:64ch;margin:0 0 26px;">Controls and data views, each built to sit on a map or float in glass.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+
+      <!-- buttons -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Buttons</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+          <button style="background:var(--gold);color:#0E1220;border:none;border-radius:999px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;" style-hover="filter:brightness(1.08);">Explore map</button>
+          <button style="background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:999px;padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="border-color:var(--bdg);">Secondary</button>
+          <button style="background:none;color:var(--tx);border:none;border-radius:999px;padding:10px 14px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:rgba(127,127,127,.12);">Ghost</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;">
+          <button style="background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--tx);border:1px solid var(--glassbd);border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:500;cursor:pointer;">On-glass</button>
+          <button style="background:#f3752b;color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">Destructive</button>
+        </div>
+      </div>
+
+      <!-- pills / badges -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Badges &amp; filter pills</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(113,126,195,.16);color:#717ec3;border:1px solid #717ec3;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:500;">+31%</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(238,132,52,.14);color:var(--gold);border:1px solid var(--bdg);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:500;">Grade II Listed</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(243,117,43,.14);color:#f3752b;border:1px solid #f3752b;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:500;">At risk</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button style="display:inline-flex;align-items:center;gap:7px;background:rgba(162,0,33,.16);border:1px solid #a20021;border-radius:999px;padding:6px 13px;cursor:pointer;color:var(--tx);font-size:12.5px;"><span style="width:7px;height:7px;border-radius:2px;background:#a20021;"></span>Community <span style="color:var(--txf);">412</span></button>
+          <button style="display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid var(--bd);border-radius:999px;padding:6px 13px;cursor:pointer;color:var(--txd);font-size:12.5px;" style-hover="border-color:var(--bdg);"><span style="width:7px;height:7px;border-radius:2px;background:#f52f57;"></span>Arts <span style="color:var(--txf);">88</span></button>
+        </div>
+      </div>
+
+      <!-- segmented + toggle -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Segmented &amp; toggle</p>
+        <div style="display:inline-flex;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:3px;margin-bottom:18px;">
+          <span style="background:var(--gold);color:#0E1220;border-radius:999px;padding:6px 16px;font-size:13px;font-weight:600;">Category</span>
+          <span style="color:var(--txd);padding:6px 16px;font-size:13px;font-weight:500;">Density</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span style="width:44px;height:25px;border-radius:999px;background:var(--gold);position:relative;display:inline-block;"><span style="position:absolute;top:2px;left:21px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></span></span>
+          <span style="width:44px;height:25px;border-radius:999px;background:var(--bg3);border:1px solid var(--bd);position:relative;display:inline-block;"><span style="position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--txf);"></span></span>
+          <span style="font-size:13px;color:var(--txd);">Show markers</span>
+        </div>
+      </div>
+
+      <!-- search input -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Search &amp; input</p>
+        <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:9px 16px;margin-bottom:12px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txf)" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span style="flex:1;font-size:14px;color:var(--txf);">Search a place or region…</span>
+          <span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);border:1px solid var(--bd);border-radius:5px;padding:2px 6px;">⌘K</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--bdg);border-radius:10px;padding:10px 14px;box-shadow:0 0 0 3px rgba(238,132,52,.14);">
+          <span style="flex:1;font-size:14px;color:var(--tx);">Halifax, West Yorkshire</span>
+        </div>
+      </div>
+
+      <!-- metric card -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Metric card</p>
+        <div style="background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glassbd);border-radius:16px;padding:16px;">
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:700;font-size:25px;">£781k</span><span style="font-size:11px;font-weight:600;color:#fff;background:#717ec3;border-radius:6px;padding:2px 6px;">13.8k sold</span></div>
+          <p style="font-size:11.5px;color:var(--txd);margin:5px 0 0;">Mean resale value · 2024</p>
+          <div style="display:flex;align-items:flex-end;gap:4px;height:46px;margin-top:13px;">
+            <span style="flex:1;height:30%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:48%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:40%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:66%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:55%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:80%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:70%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span><span style="flex:1;height:100%;background:linear-gradient(180deg,var(--gold),rgba(238,132,52,.25));border-radius:3px 3px 0 0;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- donut -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Donut chart</p>
+        <div style="display:flex;align-items:center;gap:18px;">
+          <div style="position:relative;width:104px;height:104px;flex-shrink:0;">
+            <svg viewBox="0 0 120 120" style="width:100%;height:100%;transform:rotate(-90deg);">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--bg3)" stroke-width="13"></circle>
+              <sc-for list="{{ donut }}" as="s" hint-placeholder-count="5">
+                <circle cx="60" cy="60" r="46" fill="none" stroke="{{ s.color }}" stroke-width="13" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}" style="transition:stroke-dasharray .6s;"></circle>
+              </sc-for>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-weight:700;font-size:23px;letter-spacing:-.01em;color:var(--tx);text-shadow:0 1px 0 rgba(255,255,255,.18),0 -1px 1px rgba(0,0,0,.45);">32,531</span><span style="font-size:8px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);text-shadow:0 1px 0 rgba(0,0,0,.35);">mapped</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:7px;">
+            <sc-for list="{{ donutRows }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;"><span style="width:8px;height:8px;border-radius:2px;background:{{ r.color }};"></span><span style="flex:1;color:var(--txd);">{{ r.label }}</span><span style="color:var(--tx);font-variant-numeric:tabular-nums;">{{ r.pct }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <!-- map controls -->
+      <div style="border:1px solid var(--bd);border-radius:14px;padding:22px;background:var(--bg2);">
+        <p style="font-family:'Familjen Grotesk','Satoshi',sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin:0 0 16px;">Map controls</p>
+        <div style="display:flex;align-items:flex-start;gap:16px;">
+          <div style="display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:8px;overflow:hidden;width:36px;">
+            <span style="height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-bottom:1px solid var(--bd);font-size:18px;color:var(--tx);">+</span>
+            <span style="height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg3);font-size:18px;color:var(--tx);">−</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:6px 11px;font-size:12px;color:var(--txd);margin-bottom:10px;">📍 Locate me</div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="width:56px;height:3px;background:var(--tx);position:relative;"><span style="position:absolute;left:0;top:-3px;width:1px;height:9px;background:var(--tx);"></span><span style="position:absolute;right:0;top:-3px;width:1px;height:9px;background:var(--tx);"></span></span><span style="font-family:ui-monospace,monospace;font-size:11px;color:var(--txf);">50 km</span></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;background:var(--bg2);border:1px solid var(--bdg);border-left:3px solid #a20021;border-radius:6px;padding:9px 12px;"><p style="margin:0;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#a20021;">Community</p><p style="margin:3px 0 0;font-size:12.5px;color:var(--tx);">St Mark's, Halifax</p><p style="margin:2px 0 0;font-size:11px;color:var(--txf);">53.72°N, 1.86°W</p></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════ STAINED-GLASS FOOTER MOTIF ════ -->
+  <section style="margin-top:clamp(44px,6vw,80px);position:relative;">
+    <div style="display:flex;gap:4px;height:72px;padding:0 4px;">
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#a20021,#5c0013);"></span>
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#f3752b,#a8410f);"></span>
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#ee8434,#a8480f);"></span>
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#717ec3,#3f4a80);"></span>
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#c95d63,#7d2c31);"></span>
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#496ddb,#26407f);"></span>
+      <span style="flex:1;border-radius:0 0 40px 40px;background:linear-gradient(180deg,#f52f57,#8a1830);"></span>
+    </div>
+    <footer style="max-width:1180px;margin:0 auto;padding:30px clamp(18px,4vw,40px) 56px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span aria-label="nave" role="img" style="display:inline-flex;color:var(--tx);"><svg style="height:14px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660.23 154.29"><path d="M101.23,2.59c15.55,0,30.43,5.15,40.24,13.62,10.48,9.68,14.2,21.19,14.2,46v88.51h-51.39l-2.23-88.21c0-13.62-11.47-21.79-24.65-21.79s-24.99,10.78-24.99,24.4v85.6H1V52.74C1,27.15,22.25,2.54,50.84,3.06c16.23.29,42.98-.47,50.38-.47Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M271.03,72.88l-4.3,3.99-4.22-9.31c-2.91-4.9-4.25-5.4-4.8-5.89-2.03-1.81-3.85-3.52-7.97-4.48l-11.44-1.14,4.78-4.2,5.44.21c1.58.06,3.15.28,4.67.7,2.85.79,4.12,1.51,5.94,2.75,2.68,1.83,3.96,3.21,6.17,5.79,1.63,1.91,3.06,4.92,4.22,7.15l1.52,4.43Z" fill="currentColor"></path><path d="M265.4,56.33l-3.25,1c-2.44.75-3.58,2.3-5.76,3.63-2.02,1.23-4.52,7.02-4.61,7.15l-6.42-4.2s2.65-4.64,4.28-6.12c2.41-2.18,5.16-3.93,8.19-5.47,2.24-1.14,7.56,4,7.56,4Z" fill="currentColor"></path><path d="M236.42,2.59c-42.07,0-72.64,32.69-72.64,77.48s28.09,70.65,68.04,70.65h94.18V1.02s-71.73,1.57-89.58,1.57ZM243.1,110.29c-18.76,0-35.29-9.64-35.29-31.13s13.26-33.44,35.59-33.44c19.98,0,34.2,10.44,34.2,32.84,0,21.18-15.43,31.73-34.5,31.73ZM275.32,47.42c-5.47,0-9.92-4.18-9.92-9.32s4.45-9.33,9.92-9.33,9.93,4.18,9.93,9.33-4.45,9.32-9.93,9.32Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M533.33,4.72c.25-.84-104.39,122.38-112.3,129.21-16.19,13.98-23.41,19.01-41.02,19.37h-10.18c-19.75,0-35.75-16.02-35.72-35.77l.15-114.36h55.12l-.06,78.09c0,5.36,6.46,12.58,16,1.23L471.87,4.72h61.46Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path><path d="M552,89.07c3.33,15.74,14.67,20.14,31.31,20.14,12.41,0,20.16-4.95,25-14.94l49.97.72c-.56,9.04-4.84,26.08-26.16,41.04-5.51,3.87-19.82,16.27-49.97,16.27-45.7,0-83.68-29.33-83.68-73.82S536.36,2.72,581.75,2.72s77.48,32.78,77.48,80.59v5.75h-107.23ZM609.32,61.55c-3.03-14.53-10.92-19.7-27.26-19.7s-25.33,5.17-28.36,19.7h55.62Z" fill="currentColor" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path></svg></span>
+      </div>
+      <p style="font-size:12px;color:var(--txf);margin:0;">A stained-glass system for public geospatial dashboards · OSM · GeoJSON · Leaflet · 2026</p>
+    </footer>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:2600},&quot;startTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mapMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;category&quot;,&quot;density&quot;],&quot;default&quot;:&quot;category&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { theme: "dark", mapMode: "category", plateIndex: 0, hoverRegion: null };
+
+  setMapRef = (el) => this.setMapHost(el);
+  setPlateRef = (el) => this.setPlateHost(el);
+
+  setHover(r) { if (this.state.hoverRegion !== r) this.setState({ hoverRegion: r }); }
+  clearHover() { if (this.state.hoverRegion !== null) this.setState({ hoverRegion: null }); }
+  zoomMap(d) { if (this._map) this._map.setZoom(this._map.getZoom() + d); }
+
+  PLATES() {
+    // hueRotate is relative to the sepia base (~amber). tone: "dark" inverts to a night plate.
+    return [
+      { name: "LONDON", country: "England", lat: 51.5074, lon: -0.1278, zoom: 12, coords: "51.5074° N / 0.1278° W", color: "#ee8434", tone: "dark", hr: -6, sat: 2.4 },
+      { name: "EDINBURGH", country: "Scotland", lat: 55.9533, lon: -3.1883, zoom: 12.4, coords: "55.9533° N / 3.1883° W", color: "#496ddb", tone: "light", hr: 192, sat: 2.0 },
+      { name: "MANCHESTER", country: "England", lat: 53.4808, lon: -2.2426, zoom: 12.3, coords: "53.4808° N / 2.2426° W", color: "#a20021", tone: "light", hr: -46, sat: 2.2 },
+      { name: "BRISTOL", country: "England", lat: 51.4545, lon: -2.5879, zoom: 12.4, coords: "51.4545° N / 2.5879° W", color: "#717ec3", tone: "light", hr: 198, sat: 1.7 },
+      { name: "CARDIFF", country: "Wales", lat: 51.4816, lon: -3.1791, zoom: 12.4, coords: "51.4816° N / 3.1791° W", color: "#c95d63", tone: "light", hr: -34, sat: 1.9 },
+      { name: "GLASGOW", country: "Scotland", lat: 55.8642, lon: -4.2518, zoom: 12.3, coords: "55.8642° N / 4.2518° W", color: "#f52f57", tone: "light", hr: -50, sat: 2.1 },
+      { name: "LIVERPOOL", country: "England", lat: 53.4084, lon: -2.9916, zoom: 12.4, coords: "53.4084° N / 2.9916° W", color: "#ae8799", tone: "light", hr: 300, sat: 1.4 },
+      { name: "BELFAST", country: "N. Ireland", lat: 54.5973, lon: -5.9301, zoom: 12.4, coords: "54.5973° N / 5.9301° W", color: "#f3752b", tone: "light", hr: -16, sat: 2.0 },
+    ];
+  }
+  curPlate() { return this.PLATES()[this.state.plateIndex] || this.PLATES()[0]; }
+  setPlate(i) { const n = this.PLATES().length; this.setState({ plateIndex: ((i % n) + n) % n }); }
+
+  plateFilter() {
+    const p = this.curPlate();
+    // dark line base (high-contrast roads). Dark plates keep the night ground; light plates invert to dark lines on a tinted ground.
+    if (p.tone === "dark") return "grayscale(1) sepia(0.9) saturate(" + (p.sat + 0.3) + ") hue-rotate(" + p.hr + "deg) brightness(0.95) contrast(1.22)";
+    return "invert(1) grayscale(1) sepia(0.78) saturate(" + (p.sat + 0.6) + ") hue-rotate(" + p.hr + "deg) brightness(1.0) contrast(1.18)";
+  }
+  plateScrim() {
+    const p = this.curPlate();
+    return p.tone === "dark"
+      ? "linear-gradient(180deg,rgba(8,7,3,.35) 0%,rgba(8,7,3,0) 24%,rgba(8,7,3,0) 52%,rgba(8,7,3,.78) 100%)"
+      : "linear-gradient(180deg,rgba(255,253,247,.3) 0%,rgba(255,253,247,0) 28%,rgba(255,253,247,0) 50%,rgba(255,253,247,.86) 100%)";
+  }
+
+  componentDidMount() {
+    let theme = this.props.startTheme || "dark";
+    try { const s = localStorage.getItem("tc-theme"); if (s) theme = s; } catch (e) {}
+    const mapMode = this.props.mapMode || "category";
+    this._lastTheme = theme; this._lastMode = mapMode; this._lastPlate = this.state.plateIndex;
+    this.setState({ theme, mapMode });
+    this._onResize = () => { if (this._map) this._map.invalidateSize(); if (this._plateMap) this._plateMap.invalidateSize(); };
+    window.addEventListener("resize", this._onResize);
+  }
+  componentWillUnmount() {
+    window.removeEventListener("resize", this._onResize);
+    if (this._map) { try { this._map.remove(); } catch (e) {} }
+  }
+  componentDidUpdate() {
+    if (this._lastTheme !== this.state.theme) { this._lastTheme = this.state.theme; this.applyTheme(); }
+    if (this._lastMode !== this.state.mapMode) { this._lastMode = this.state.mapMode; this.refreshChoro(); }
+    if (this._lastPlate !== this.state.plateIndex) { this._lastPlate = this.state.plateIndex; this.flyPlate(); }
+  }
+
+  setPlateHost(el) {
+    if (el && this._plateEl !== el) { this._plateEl = el; this.initPlate(el); }
+    else if (!el) { if (this._plateMap) { try { this._plateMap.remove(); } catch (e) {} } this._plateMap = null; this._plateEl = null; }
+  }
+  initPlate(el) {
+    if (!window.L) { setTimeout(() => { if (this._plateEl === el) this.initPlate(el); }, 90); return; }
+    const L = window.L;
+    const map = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, zoomSnap: 0.01, fadeAnimation: true });
+    const p = this.curPlate();
+    map.setView([p.lat, p.lon], p.zoom);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19, crossOrigin: true }).addTo(map);
+    this._plateMap = map;
+    setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 60);
+  }
+  flyPlate() {
+    if (!this._plateMap) return;
+    const p = this.curPlate();
+    this._plateMap.flyTo([p.lat, p.lon], p.zoom, { duration: 0.9 });
+  }
+
+  toggleTheme() {
+    this.setState(s => { const t = s.theme === "dark" ? "light" : "dark"; try { localStorage.setItem("tc-theme", t); } catch (e) {} return { theme: t }; });
+  }
+  setMapMode(m) { this.setState({ mapMode: m }); }
+
+  CATS() {
+    return [
+      { id: "residential", label: "Residential", color: "#ee8434" },
+      { id: "other_christian", label: "Other Christian use", color: "#496ddb" },
+      { id: "education", label: "Education", color: "#717ec3" },
+      { id: "hospitality", label: "Hospitality", color: "#c95d63" },
+      { id: "commercial", label: "Commercial", color: "#a20021" },
+      { id: "community", label: "Community", color: "#f52f57" },
+      { id: "arts_culture", label: "Arts & Culture", color: "#f3752b" },
+      { id: "unknown", label: "Other / unrecorded", color: "#ae8799" },
+    ];
+  }
+  catColor(id) { const c = this.CATS().find(x => x.id === id); return c ? c.color : "#ae8799"; }
+
+  // aggregated from where_went_uk_churches_v1.csv (32,531 records) — n: sites, d: density index vs. Scotland, cat: dominant conversion
+  regionData() {
+    return {
+      "Scotland": { d: 1.0, cat: "other_christian", n: 5291 },
+      "South West": { d: 0.78, cat: "residential", n: 4148 },
+      "South East": { d: 0.66, cat: "residential", n: 3473 },
+      "East of England": { d: 0.64, cat: "residential", n: 3393 },
+      "Wales": { d: 0.55, cat: "other_christian", n: 2933 },
+      "East Midlands": { d: 0.46, cat: "residential", n: 2442 },
+      "West Midlands": { d: 0.41, cat: "residential", n: 2154 },
+      "North West": { d: 0.39, cat: "residential", n: 2087 },
+      "Yorkshire & Humber": { d: 0.39, cat: "residential", n: 2050 },
+      "Northern Ireland": { d: 0.37, cat: "other_christian", n: 1936 },
+      "London": { d: 0.23, cat: "residential", n: 1212 },
+      "North East": { d: 0.16, cat: "residential", n: 826 },
+    };
+  }
+  cities() {
+    return [
+      { name: "London", region: "Greater London", cat: "community", lat: 51.507, lon: -0.128, count: 612 },
+      { name: "Manchester", region: "North West", cat: "community", lat: 53.48, lon: -2.24, count: 248 },
+      { name: "Leeds", region: "Yorkshire & Humber", cat: "residential", lat: 53.8, lon: -1.55, count: 194 },
+      { name: "Cardiff", region: "Wales", cat: "residential", lat: 51.48, lon: -3.18, count: 137 },
+      { name: "Edinburgh", region: "Scotland", cat: "education", lat: 55.95, lon: -3.19, count: 121 },
+      { name: "Bristol", region: "South West", cat: "arts", lat: 51.45, lon: -2.59, count: 98 },
+    ];
+  }
+
+  goldRamp(d) {
+    const stops = ["#3a1c08", "#7a3d12", "#b35d1f", "#ee8434", "#f79d5c"];
+    return stops[Math.min(4, Math.floor(d * 5))];
+  }
+
+  tileUrl() {
+    return this.state.theme === "dark"
+      ? "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png";
+  }
+
+  setMapHost(el) {
+    if (el && this._mapEl !== el) { this._mapEl = el; this.initMap(el); }
+    else if (!el) { if (this._mapEl && this._wheelPan) { try { this._mapEl.removeEventListener("wheel", this._wheelPan); } catch (e) {} } if (this._map) { try { this._map.remove(); } catch (e) {} } this._map = null; this._mapEl = null; }
+  }
+
+  initMap(el) {
+    if (!window.L) { this._wait = setTimeout(() => { if (this._mapEl === el) this.initMap(el); }, 90); return; }
+    const L = window.L;
+    const map = L.map(el, { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: true, minZoom: 4, maxZoom: 12, zoomSnap: 0.25 });
+    map.setView([54.6, -3.4], 5.3);
+    this._tile = L.tileLayer(this.tileUrl(), { subdomains: "abcd", maxZoom: 19, crossOrigin: true, attribution: "&copy; OpenStreetMap, &copy; CARTO" }).addTo(map);
+    this._map = map;
+    // two-finger trackpad / wheel gesture pans the map (does not zoom)
+    this._wheelPan = (e) => {
+      if (e.ctrlKey) return; // pinch-zoom gesture — let it pass
+      e.preventDefault();
+      map.panBy([e.deltaX, e.deltaY], { animate: false });
+    };
+    el.addEventListener("wheel", this._wheelPan, { passive: false });
+    this.loadGeo().then(() => this.drawChoro());
+  }
+
+  markerStyle(c) {
+    return { radius: 6, fillColor: this.catColor(c.cat), color: this.state.theme === "dark" ? "#ECEAF0" : "#ffffff", weight: 1, opacity: 0.9, fillOpacity: 1 };
+  }
+
+  loadGeo() {
+    if (this._geoP) return this._geoP;
+    const urls = [
+      "https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json",
+      "https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/eng/eer.json",
+    ];
+    const nameMap = {
+      "North East": "North East", "North West": "North West", "Yorkshire and The Humber": "Yorkshire & Humber",
+      "East Midlands": "East Midlands", "West Midlands": "West Midlands", "Eastern": "East of England", "London": "London",
+      "South East": "South East", "South West": "South West", "Wales": "Wales", "Scotland": "Scotland",
+    };
+    const tryUrl = (i) => { if (i >= urls.length) return Promise.resolve(null); return fetch(urls[i]).then(r => { if (!r.ok) throw 0; return r.json(); }).catch(() => tryUrl(i + 1)); };
+    this._geoP = tryUrl(0).then(gj => {
+      if (gj && gj.features) for (const f of gj.features) { const nm = (f.properties && (f.properties.EER13NM || f.properties.name)) || ""; f.properties = f.properties || {}; f.properties.tcRegion = nameMap[nm] || nm; }
+      this._geo = gj; return gj;
+    });
+    return this._geoP;
+  }
+
+  choroStyle(region) {
+    const data = this.regionData()[region];
+    const dark = this.state.theme === "dark";
+    if (!data) return { color: "#ae8799", weight: 1, opacity: 0.4, fillColor: "#ae8799", fillOpacity: dark ? 0.05 : 0.06, className: "tc-region" };
+    if (this.state.mapMode === "density") {
+      return { color: "#f79d5c", weight: 1.4, opacity: dark ? 0.95 : 0.85, fillColor: "#ee8434", fillOpacity: (dark ? 0.1 : 0.14) + data.d * (dark ? 0.42 : 0.48), className: "tc-region" };
+    }
+    const col = this.catColor(data.cat);
+    return { color: col, weight: 1.8, opacity: dark ? 1 : 0.9, fillColor: col, fillOpacity: dark ? 0.42 : 0.46, className: "tc-region" };
+  }
+
+  drawChoro() {
+    const map = this._map, L = window.L; if (!map || !L || !this._geo) return;
+    if (this._choro) { try { map.removeLayer(this._choro); } catch (e) {} }
+    const self = this;
+    this._choro = L.geoJSON(this._geo, {
+      style: f => this.choroStyle(f.properties.tcRegion),
+      onEachFeature: (f, layer) => {
+        const region = f.properties.tcRegion; const data = this.regionData()[region];
+        if (data) layer.bindTooltip("<b>" + region + "</b><br>" + this.CATS().find(x => x.id === data.cat).label + " · index " + Math.round(data.d * 100), { className: "tc-tip", sticky: true });
+        layer.on("mouseover", function () { this.setStyle({ weight: 3.2, fillOpacity: Math.min(0.68, self.choroStyle(region).fillOpacity + 0.18) }); this.bringToFront(); self.setHover(region); });
+        layer.on("mouseout", function () { self._choro.resetStyle(this); self.clearHover(); });
+      },
+    }).addTo(map);
+    this._choro.bringToBack();
+    if (!this._fitted) {
+      this._fitted = true;
+      try { this._map.fitBounds(this._choro.getBounds(), { paddingTopLeft: [40, 70], paddingBottomRight: [40, 60] }); } catch (e) {}
+    }
+  }
+
+  refreshChoro() {
+    if (this._choro) this._choro.eachLayer(l => { try { l.setStyle(this.choroStyle(l.feature.properties.tcRegion)); } catch (e) {} });
+  }
+
+  applyTheme() {
+    if (this._tile) this._tile.setUrl(this.tileUrl());
+    this.refreshChoro();
+  }
+
+  donutBuild() {
+    // national conversion-type totals from the dataset (32,531 records)
+    const rows = [
+      { id: "residential", n: 14716 }, { id: "other_christian", n: 9491 }, { id: "education", n: 2811 },
+      { id: "hospitality", n: 1578 }, { id: "commercial", n: 1018 }, { id: "unknown", n: 2917 },
+    ];
+    const total = 32531;
+    const C = 2 * Math.PI * 46; let acc = 0;
+    const segs = rows.map(r => { const len = r.n / total * C; const seg = { color: this.catColor(r.id), dash: len.toFixed(2) + " " + C.toFixed(2), offset: (-acc).toFixed(2) }; acc += len; return seg; });
+    const drows = rows.map(r => ({ label: this.CATS().find(x => x.id === r.id).label, color: this.catColor(r.id), pct: (r.n / total * 100).toFixed(0) + "%" }));
+    return { segs, drows };
+  }
+
+  renderVals() {
+    const dark = this.state.theme === "dark";
+    const cats = this.CATS();
+    const mapTabs = [["category", "Category"], ["density", "Density"]].map(([id, label]) => ({
+      label, go: () => this.setMapMode(id),
+      bg: this.state.mapMode === id ? "var(--gold)" : "transparent",
+      color: this.state.mapMode === id ? "#0E1220" : "var(--txd)",
+    }));
+    const bars = Object.values(this.regionData()).map(r => r.d).sort((a, b) => a - b).map(d => ({ h: Math.round(14 + d * 86) + "%" }));
+    const locations = this.cities().map(c => ({ name: c.name, region: c.region, count: c.count, color: this.catColor(c.cat) }));
+    const legend = (this.state.mapMode === "density"
+      ? [["Low", "#7a3d12"], ["", "#b35d1f"], ["", "#ee8434"], ["High", "#f79d5c"]].map(([label, color]) => ({ label, color }))
+      : cats.slice(0, 8).map(c => ({ label: c.label, color: c.color })));
+    const legendTitle = this.state.mapMode === "density" ? "Site density" : "Dominant conversion";
+    const d = this.donutBuild();
+
+    // hover-card values for the national plate
+    const hr = this.state.hoverRegion;
+    const hd = hr ? this.regionData()[hr] : null;
+    const hoverColor = hd ? (this.state.mapMode === "density" ? "#ee8434" : this.catColor(hd.cat)) : "var(--gold)";
+    const hoverInfo = hd
+      ? { kicker: "Region", name: hr, cat: this.CATS().find(x => x.id === hd.cat).label, index: Math.round(hd.d * 100), bar: Math.round(hd.d * 100) + "%", sites: hd.n.toLocaleString() }
+      : { kicker: "Hover to inspect", name: "United Kingdom", cat: "Residential-led · 45%", index: 45, bar: "45%", sites: "32,531" };
+
+    const p = this.curPlate();
+    const plateDots = this.PLATES().map((pl, i) => ({
+      go: () => this.setPlate(i),
+      bg: i === this.state.plateIndex ? pl.color : "rgba(140,140,140,.45)",
+      size: i === this.state.plateIndex ? "26px" : "8px",
+    }));
+
+    return {
+      theme: this.state.theme,
+      themeIcon: dark ? "☀" : "☾",
+      toggleTheme: () => this.toggleTheme(),
+      setMapHost: this.setMapRef,
+      setPlateHost: this.setPlateRef,
+      plateFilter: this.plateFilter(),
+      plateScrim: this.plateScrim(),
+      plateBg: p.tone === "dark" ? "#0c0a06" : "#f4f1e9",
+      plateLine: p.tone === "dark" ? "rgba(255,255,255,.14)" : "rgba(0,0,0,.12)",
+      plateColor: p.color,
+      plateName: p.name,
+      plateCountry: p.country,
+      plateCoords: p.coords,
+      plateDots,
+      prevPlate: () => this.setPlate(this.state.plateIndex - 1),
+      nextPlate: () => this.setPlate(this.state.plateIndex + 1),
+      zoomIn: () => this.zoomMap(0.5),
+      zoomOut: () => this.zoomMap(-0.5),
+      mapTabs, bars, locations, legend, legendTitle,
+      posterBg: dark ? "#0d1017" : "#e9edf0",
+      posterScrim: dark
+        ? "linear-gradient(180deg,rgba(6,8,14,.4) 0%,rgba(6,8,14,0) 26%,rgba(6,8,14,0) 50%,rgba(6,8,14,.6) 100%)"
+        : "linear-gradient(180deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,0) 26%,rgba(255,255,255,0) 50%,rgba(255,255,255,.55) 100%)",
+      posterLine: dark ? "rgba(229,229,235,.16)" : "rgba(40,50,60,.18)",
+      posterColor: dark ? "#f79d5c" : "#a8410f",
+      posterTitle: "UNITED KINGDOM",
+      posterSub: legendTitle,
+      hoverKicker: hoverInfo.kicker,
+      hoverName: hoverInfo.name,
+      hoverCat: hoverInfo.cat,
+      hoverColor: hoverColor,
+      hoverIndex: hoverInfo.index,
+      hoverBar: hoverInfo.bar,
+      hoverSites: hoverInfo.sites,
+      metricValue: "32,531", metricDelta: "45% homes", metricLabel: "Former churches mapped · UK-wide",
+      donut: d.segs, donutRows: d.drows,
+    };
+  }
+}
+</script>
+</body>
+</html>

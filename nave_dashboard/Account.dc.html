@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600&family=League+Script&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#fbfbfd;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  ::selection{background:rgba(0,113,227,0.15);}
+  details summary::-webkit-details-marker{display:none;}
+  @keyframes riseIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  :root,[data-nave-theme="light"]{
+    --bg:#fbfbfd;--surface:#ffffff;--surface2:#f5f5f7;
+    --ink:#1d1d1f;--ink2:#6e6e73;--ink3:#86868b;--ink4:#aeaeb2;--ink5:#3a3a3c;
+    --border:#d2d2d7;--border2:#e2e2e6;
+    --line:rgba(0,0,0,0.07);--line2:rgba(0,0,0,0.06);--line3:rgba(0,0,0,0.05);
+    --btnbg:#1d1d1f;--btnfg:#ffffff;--btnbg-h:#000000;--navbg:rgba(251,251,253,0.82);
+  }
+  [data-nave-theme="dark"]{
+    --bg:#000000;--surface:#1c1c1e;--surface2:#2c2c2e;
+    --ink:#f5f5f7;--ink2:#a1a1a6;--ink3:#86868b;--ink4:#6e6e73;--ink5:#d4d4d6;
+    --border:#3a3a3c;--border2:#3a3a3c;
+    --line:rgba(255,255,255,0.10);--line2:rgba(255,255,255,0.08);--line3:rgba(255,255,255,0.06);
+    --btnbg:#f5f5f7;--btnfg:#1d1d1f;--btnbg-h:#ffffff;--navbg:rgba(20,20,22,0.80);
+  }
+  [data-nave-theme="dark"] header img,[data-nave-theme="dark"] footer img{filter:invert(1) brightness(1.9);}
+</style>
+</helmet>
+
+<div data-nave-theme="{{ theme }}" style="font-family:'Space Grotesk',system-ui,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh;transition:background .4s ease,color .4s ease;">
+
+  <header style="position:sticky;top:0;z-index:200;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:var(--navbg);border-bottom:1px solid var(--line);">
+    <div style="max-width:1040px;margin:0 auto;padding:0 22px;height:52px;display:flex;align-items:center;justify-content:space-between;">
+      <a href="Nave.dc.html" title="Nave — home" style="display:flex;align-items:center;text-decoration:none;">
+        <img src="assets/nave_black.svg" alt="Nave" style="height:21px;width:auto;display:block;" />
+      </a>
+      <nav style="display:flex;gap:32px;align-items:center;">
+        <a href="Nave.dc.html" style="text-decoration:none;font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.85;">Search</a>
+        <a href="Regions.dc.html" style="text-decoration:none;font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;">Regions</a>
+        <a href="Alerts.dc.html" style="text-decoration:none;font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;">Alerts</a>
+        <span style="font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;cursor:default;">Pre-market</span>
+      </nav>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button onClick="{{ toggleTheme }}" title="Toggle appearance" style="width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);padding:0;font-size:13px;line-height:1;" style-hover="background:var(--surface2);">{{ themeIcon }}</button>
+        <a href="Account.dc.html" title="Account" style="width:30px;height:30px;border-radius:50%;background:var(--btnbg);color:var(--btnfg);display:flex;align-items:center;justify-content:center;font-family:'Gabarito';font-weight:700;font-size:13px;text-decoration:none;">{{ initial }}</a>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width:1040px;margin:0 auto;padding:50px 22px 90px;display:grid;grid-template-columns:240px 1fr;gap:48px;align-items:start;animation:riseIn .6s cubic-bezier(.16,1,.3,1) both;">
+
+    <!-- Sidebar -->
+    <aside style="position:sticky;top:74px;">
+      <div style="display:flex;align-items:center;gap:12px;padding-bottom:20px;margin-bottom:18px;border-bottom:1px solid var(--line);">
+        <span style="width:42px;height:42px;border-radius:50%;background:var(--btnbg);color:var(--btnfg);display:flex;align-items:center;justify-content:center;font-family:'Gabarito';font-weight:800;font-size:17px;flex-shrink:0;">{{ initial }}</span>
+        <div style="min-width:0;">
+          <p style="font:600 14px 'Space Grotesk';color:var(--ink);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.name }}</p>
+          <p style="font:400 12px 'Space Grotesk';color:var(--ink3);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.email }}</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="10">
+          <button onClick="{{ n.select }}" style="display:flex;align-items:center;gap:11px;width:100%;padding:9px 12px;border-radius:11px;border:none;background:{{ n.bg }};color:{{ n.color }};font:{{ n.weight }} 13px 'Space Grotesk';cursor:{{ n.cursor }};text-align:left;transition:all .14s;" style-hover="background:{{ n.hoverBg }};">
+            <span style="font-size:13px;width:15px;text-align:center;flex-shrink:0;opacity:0.85;">{{ n.icon }}</span>
+            {{ n.label }}
+            <sc-if value="{{ n.soon }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font:500 9px 'Space Grotesk';letter-spacing:0.06em;text-transform:uppercase;background:var(--surface2);color:var(--ink3);padding:2px 6px;border-radius:5px;">Soon</span></sc-if>
+          </button>
+        </sc-for>
+        <button style="display:flex;align-items:center;gap:11px;width:100%;padding:9px 12px;border-radius:11px;border:none;background:transparent;color:#c0392b;font:400 13px 'Space Grotesk';cursor:pointer;text-align:left;margin-top:6px;" style-hover="background:rgba(192,57,43,0.08);"><span style="width:15px;text-align:center;flex-shrink:0;">⏻</span>Log out</button>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <section style="min-width:0;" key="{{ active }}">
+      <h1 style="font-family:'Gabarito';font-weight:900;font-size:32px;letter-spacing:-0.03em;color:var(--ink);margin:0 0 6px;">{{ activeTitle }}</h1>
+      <p style="font:300 16px 'Space Grotesk';color:var(--ink2);margin:0 0 28px;">{{ activeSub }}</p>
+
+      <!-- PROFILE -->
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+      <div style="animation:fadeIn .35s ease both;">
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:28px;">
+          <span style="width:60px;height:60px;border-radius:50%;background:var(--btnbg);color:var(--btnfg);display:flex;align-items:center;justify-content:center;font-family:'Gabarito';font-weight:800;font-size:24px;">{{ initial }}</span>
+          <div>
+            <p style="font:600 17px 'Space Grotesk';color:var(--ink);margin:0;">{{ user.name }}</p>
+            <p style="font:400 14px 'Space Grotesk';color:var(--ink3);margin:3px 0 0;">{{ user.email }}</p>
+          </div>
+        </div>
+        <sc-for list="{{ profileCards }}" as="card" hint-placeholder-count="3">
+          <div style="border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:4px 22px;margin-bottom:16px;">
+            <sc-for list="{{ card.rows }}" as="row" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid var(--line3);">
+                <div><p style="font:500 14px 'Space Grotesk';color:{{ row.labelColor }};margin:0;">{{ row.label }}</p><sc-if value="{{ row.hasValue }}" hint-placeholder-val="{{ true }}"><p style="font:400 13px 'Space Grotesk';color:var(--ink3);margin:3px 0 0;">{{ row.value }}</p></sc-if></div>
+                <span style="font:400 13px 'Space Grotesk';color:{{ row.actionColor }};white-space:nowrap;cursor:pointer;">{{ row.action }} ›</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- SAVED -->
+      <sc-if value="{{ isSaved }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeIn .35s ease both;display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ savedItems }}" as="s" hint-placeholder-count="3">
+          <a href="Nave.dc.html" style="text-decoration:none;display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:16px 20px;transition:all .22s;" style-hover="transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,0.08);">
+            <div><p style="font:600 15px 'Space Grotesk';color:var(--ink);margin:0;">{{ s.title }}</p><p style="font:400 13px 'Space Grotesk';color:var(--ink3);margin:3px 0 0;">{{ s.meta }}</p></div>
+            <span style="color:var(--ink3);font-size:16px;">›</span>
+          </a>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- SETTINGS -->
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeIn .35s ease both;">
+        <sc-for list="{{ settingsCards }}" as="card" hint-placeholder-count="3">
+          <div style="border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:4px 22px;margin-bottom:16px;">
+            <sc-for list="{{ card.rows }}" as="row" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid var(--line3);">
+                <div><p style="font:500 14px 'Space Grotesk';color:{{ row.labelColor }};margin:0;">{{ row.label }}</p><sc-if value="{{ row.hasValue }}" hint-placeholder-val="{{ true }}"><p style="font:400 13px 'Space Grotesk';color:var(--ink3);margin:3px 0 0;">{{ row.value }}</p></sc-if></div>
+                <span style="font:400 13px 'Space Grotesk';color:{{ row.actionColor }};white-space:nowrap;cursor:pointer;">{{ row.action }} ›</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- FAQ -->
+      <sc-if value="{{ isFaq }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeIn .35s ease both;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:6px 24px;">
+        <sc-for list="{{ faqItems }}" as="q" hint-placeholder-count="6">
+          <details style="border-bottom:1px solid var(--line3);padding:16px 0;">
+            <summary style="font:600 15px 'Space Grotesk';color:var(--ink);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;">{{ q.q }}<span style="color:var(--ink3);font-size:15px;">+</span></summary>
+            <p style="font:300 14px/1.65 'Space Grotesk';color:var(--ink2);margin:12px 0 0;">{{ q.a }}</p>
+          </details>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- SUPPORT -->
+      <sc-if value="{{ isSupport }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeIn .35s ease both;display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ supportItems }}" as="s" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:18px 20px;">
+            <div><p style="font:600 15px 'Space Grotesk';color:var(--ink);margin:0;">{{ s.label }}</p><p style="font:400 13px 'Space Grotesk';color:var(--ink3);margin:3px 0 0;">{{ s.value }}</p></div>
+            <span style="font:500 13px 'Space Grotesk';color:#6b70c2;white-space:nowrap;cursor:pointer;">{{ s.action }} →</span>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- TEXT (privacy / terms) -->
+      <sc-if value="{{ isText }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeIn .35s ease both;max-width:620px;">
+        <p style="font:400 13px 'Space Grotesk';color:var(--ink3);margin:0 0 22px;">Last updated · June 2026</p>
+        <sc-for list="{{ textItems }}" as="t" hint-placeholder-count="5">
+          <div style="margin-bottom:22px;">
+            <p style="font:600 15px 'Space Grotesk';color:var(--ink);margin:0 0 5px;">{{ t.h }}</p>
+            <p style="font:300 14px/1.7 'Space Grotesk';color:var(--ink2);margin:0;">{{ t.b }}</p>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- SIMPLE EMPTY (viewings / alerts / landlord) -->
+      <sc-if value="{{ isSimple }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeIn .35s ease both;border:1px solid var(--line);border-radius:22px;background:var(--surface);padding:52px 32px;text-align:center;">
+        <div style="width:58px;height:58px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:24px;color:var(--ink3);">{{ simple.icon }}</div>
+        <p style="font-family:'Gabarito';font-weight:700;font-size:18px;color:var(--ink);margin:0 0 8px;">{{ simple.title }}</p>
+        <p style="font:300 15px/1.6 'Space Grotesk';color:var(--ink2);margin:0 auto 22px;max-width:340px;">{{ simple.body }}</p>
+        <a href="{{ simple.href }}" style="display:inline-block;text-decoration:none;background:var(--btnbg);color:var(--btnfg);border-radius:980px;padding:11px 24px;font:500 14px 'Space Grotesk';">{{ simple.cta }}</a>
+      </div>
+      </sc-if>
+
+    </section>
+  </main>
+
+  <footer style="border-top:1px solid var(--line);background:var(--bg);">
+    <div style="max-width:1040px;margin:0 auto;padding:30px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <a href="Nave.dc.html" style="display:flex;align-items:center;text-decoration:none;"><img src="assets/nave_black.svg" alt="Nave" style="height:15px;width:auto;display:block;opacity:0.5;" /></a>
+      <p style="font:400 12px 'Space Grotesk';color:var(--ink4);margin:0;">© 2026 Nave · Church &amp; Gathering Space Intelligence · UK hosted · GDPR compliant</p>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { dark: false, active: "profile" };
+
+  componentDidMount() {
+    try { if (localStorage.getItem("nave-theme") === "dark") this.setState({ dark: true }); } catch (e) {}
+  }
+  toggleTheme() {
+    this.setState(s => {
+      const dark = !s.dark;
+      try { localStorage.setItem("nave-theme", dark ? "dark" : "light"); } catch (e) {}
+      return { dark };
+    });
+  }
+
+  renderVals() {
+    const active = this.state.active;
+    const user = { name: "Alex Mercer", email: "alex@nave.co.uk" };
+
+    const navDefs = [
+      { id: "profile", label: "Profile", icon: "◍" },
+      { id: "saved", label: "Saved properties", icon: "♥" },
+      { id: "viewings", label: "Viewings", icon: "▣" },
+      { id: "alerts", label: "Alerts", icon: "◔" },
+      { id: "settings", label: "Settings", icon: "⚙" },
+      { id: "faq", label: "FAQ", icon: "?" },
+      { id: "support", label: "Support", icon: "✉" },
+      { id: "privacy", label: "Privacy policy", icon: "⛨" },
+      { id: "terms", label: "Terms & conditions", icon: "▤" },
+      { id: "landlord", label: "Landlord portal", icon: "⌂", soon: true },
+    ];
+    const nav = navDefs.map(n => {
+      const isActive = n.id === active;
+      return {
+        ...n,
+        bg: isActive ? "var(--btnbg)" : "transparent",
+        hoverBg: isActive ? "var(--btnbg)" : "var(--surface2)",
+        color: isActive ? "var(--btnfg)" : (n.soon ? "var(--ink3)" : "var(--ink)"),
+        weight: isActive ? "600" : "400",
+        cursor: n.soon ? "default" : "pointer",
+        soon: !!n.soon,
+        select: () => { if (!n.soon) this.setState({ active: n.id }); },
+      };
+    });
+
+    const titles = {
+      profile: ["Profile", "Manage your details and preferences."],
+      saved: ["Saved properties", "3 properties saved."],
+      viewings: ["Viewings", "Your booked and requested viewings."],
+      alerts: ["Alerts", "2 active alerts."],
+      settings: ["Settings", "Notifications, language and security."],
+      faq: ["FAQ", "Answers to the questions we hear most."],
+      support: ["Support", "We aim to respond within 24 hours."],
+      privacy: ["Privacy policy", "How we handle your data."],
+      terms: ["Terms & conditions", "The rules for using Nave."],
+      landlord: ["Landlord portal", "List your space directly on Nave."],
+    };
+
+    const profileCards = [
+      { rows: [
+        { label: "Full name", value: user.name, action: "Edit" },
+        { label: "Email", value: user.email, action: "Change" },
+        { label: "Phone", value: "Not set", action: "Add" },
+        { label: "Password", value: "••••••••••••", action: "Change" },
+      ] },
+      { rows: [
+        { label: "Search intent", value: "Conversion to a home", action: "Edit" },
+        { label: "Max budget", value: "£250,000", action: "Edit" },
+        { label: "Preferred counties", value: "Yorkshire, Lancashire", action: "Edit" },
+      ] },
+      { rows: [
+        { label: "Export my data", action: "Download JSON" },
+        { label: "Delete account", action: "Delete", danger: true },
+      ] },
+    ];
+    const settingsCards = [
+      { rows: [
+        { label: "Email notifications", value: "Enabled", action: "Toggle" },
+        { label: "WhatsApp alerts", value: "Disabled", action: "Toggle" },
+        { label: "Weekly digest", value: "Monday mornings", action: "Edit" },
+        { label: "Alert frequency", value: "Immediate", action: "Edit" },
+      ] },
+      { rows: [
+        { label: "Language", value: "English (UK)", action: "Change" },
+        { label: "Currency", value: "GBP £", action: "Change" },
+      ] },
+      { rows: [
+        { label: "Two-factor authentication", value: "Not enabled", action: "Enable" },
+        { label: "Active sessions", value: "1 session", action: "View all" },
+        { label: "Sign out all devices", action: "Sign out", danger: true },
+      ] },
+    ];
+    const decorate = (cards) => cards.map(c => ({ rows: c.rows.map(r => ({
+      ...r,
+      hasValue: !!r.value,
+      labelColor: r.danger ? "#c0392b" : "var(--ink)",
+      actionColor: r.danger ? "#c0392b" : "var(--ink3)",
+    })) }));
+
+    const savedItems = [
+      { title: "St. Mark's Methodist Chapel", meta: "Halifax, West Yorkshire · £165,000" },
+      { title: "Wesleyan Chapel & Hall", meta: "Barnsley, South Yorkshire · £119,000" },
+      { title: "Bethel Chapel", meta: "Treorchy, Mid Glamorgan · £78,000" },
+    ];
+    const faqItems = [
+      { q: "How does Nave source its listings?", a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals and the Charities Commission. Data refreshes every 3 hours." },
+      { q: "What does the match score mean?", a: "The score reflects suitability for your stated purpose — based on listing details, planning status, location and comparable transactions." },
+      { q: "How do pre-market signals work?", a: "We monitor Charities Commission filings, Companies House dissolutions and planning applications. These can give 6–18 months advance notice before a property lists." },
+      { q: "Is my data safe?", a: "Yes. AES-256 encryption, UK data centres, ICO registered. Export or delete your data at any time from your profile." },
+      { q: "Can I get WhatsApp alerts?", a: "Yes — add your phone number in Profile and enable WhatsApp alerts in Settings." },
+      { q: "What is a magic link?", a: "A one-time secure sign-in link sent to your email. No password required. Expires in 15 minutes, single use only." },
+    ];
+    const supportItems = [
+      { label: "Email support", value: "support@nave.co.uk", action: "Open email" },
+      { label: "Report a bug", value: "Something not working?", action: "Report" },
+      { label: "Feature request", value: "Suggest something new", action: "Suggest" },
+    ];
+    const privacyItems = [
+      { h: "What we collect", b: "Email address, name, search preferences and saved properties. We collect only what is necessary for the service." },
+      { h: "How we use it", b: "To provide property search, alerts and match analysis. We do not sell your data or share it with advertisers." },
+      { h: "Lawful basis", b: "Contract (your account), legitimate interest (improving the service) and consent (optional analytics). You can withdraw consent at any time." },
+      { h: "Data retention", b: "Account data is kept while your account is active. Search history is retained for 90 days. Audit logs are kept for 7 years." },
+      { h: "Your rights", b: "Access, rectification, erasure, portability and objection under UK GDPR. Contact privacy@nave.co.uk." },
+    ];
+    const termsItems = [
+      { h: "Service description", b: "Nave aggregates publicly available property listings and provides match analysis. We are not an estate agent and do not act on your behalf in any transaction." },
+      { h: "Analysis disclaimer", b: "Match scores are indicative only. They do not constitute professional property, legal or financial advice. Always instruct qualified professionals before purchasing." },
+      { h: "Data accuracy", b: "Listing data is sourced from third parties. We cannot guarantee accuracy or availability. Always verify directly with the source." },
+      { h: "Acceptable use", b: "You may not scrape, automate or resell data from Nave. The service is for personal property search only." },
+      { h: "Governing law", b: "These terms are governed by English law. Disputes are subject to the exclusive jurisdiction of English courts." },
+    ];
+    const simpleDefs = {
+      viewings: { icon: "▣", title: "No viewings booked yet", body: "When you request viewings through Nave, they'll appear here.", cta: "Browse properties", href: "Nave.dc.html" },
+      alerts: { icon: "◔", title: "2 active alerts", body: "Manage the alerts that notify you when matching properties appear.", cta: "Go to alerts", href: "Alerts.dc.html" },
+      landlord: { icon: "⌂", title: "Coming soon", body: "List your church or gathering space directly on Nave. Reach verified buyers and track interest in real time.", cta: "Join the waitlist", href: "Account.dc.html" },
+    };
+
+    const isText = active === "privacy" || active === "terms";
+    const isSimple = active === "viewings" || active === "alerts" || active === "landlord";
+
+    return {
+      theme: this.state.dark ? "dark" : "light",
+      themeIcon: this.state.dark ? "☀" : "☾",
+      toggleTheme: () => this.toggleTheme(),
+      user, initial: user.name.charAt(0).toUpperCase(),
+      nav, active,
+      activeTitle: titles[active][0],
+      activeSub: titles[active][1],
+      isProfile: active === "profile",
+      isSaved: active === "saved",
+      isSettings: active === "settings",
+      isFaq: active === "faq",
+      isSupport: active === "support",
+      isText, isSimple,
+      profileCards: decorate(profileCards),
+      settingsCards: decorate(settingsCards),
+      savedItems, faqItems, supportItems,
+      textItems: active === "terms" ? termsItems : privacyItems,
+      simple: isSimple ? simpleDefs[active] : simpleDefs.viewings,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -40,8 +40,9 @@ function Nav({ dark }: { dark: boolean }) {
         </button>
         <div className="nav-links">
           <NavLink to="/"           className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Search</NavLink>
-          <NavLink to="/favourites" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Saved</NavLink>
-          <NavLink to="/alerts"     className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Alerts</NavLink>
+          <NavLink to="/churches-for-sale" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Regions</NavLink>
+          <NavLink to="/favourites"        className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Saved</NavLink>
+          <NavLink to="/alerts"            className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>Alerts</NavLink>
         </div>
         <div className="nav-right">
           <NavLink to="/favourites" className="btn-sm" style={{ border:"none" }}><Heart size={15}/></NavLink>

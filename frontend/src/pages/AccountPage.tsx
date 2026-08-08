@@ -1,513 +1,265 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import {
-  User, Heart, Calendar, Bell, Settings,
-  HelpCircle, Shield, FileText, LogOut,
-  ChevronRight, ChevronLeft, Building2, Mail
-} from "lucide-react";
-import { authApi, favouritesApi, alertsApi } from "../api/client";
+import { useAuthStore } from "../stores/authStore";
+import { useSEO } from "../hooks/useSEO";
 
-/* ── Shared sub-page shell ───────────────────────────────────────────────── */
-function SubPage({ title, onBack, children }: {
-  title: string;
-  onBack: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        onClick={onBack}
-        style={{
-          display: "flex", alignItems: "center", gap: 6,
-          fontFamily: "var(--font-body)", fontSize: "0.82rem",
-          color: "var(--mid)", background: "none", border: "none",
-          cursor: "pointer", padding: "0 0 20px", transition: "color .13s",
-        }}
-      >
-        <ChevronLeft size={15} /> Back
-      </button>
-      <h2 style={{
-        fontFamily: "var(--font-display)",
-        fontSize: "1.5rem", fontWeight: 900,
-        letterSpacing: "-.03em", color: "var(--ink)",
-        marginBottom: 24,
-      }}>
-        {title}
-      </h2>
-      {children}
-    </div>
-  );
-}
+type Section = "profile"|"saved"|"viewings"|"alerts"|"settings"|"faq"|"support"|"privacy"|"terms"|"landlord";
 
-/* ── Reusable row ────────────────────────────────────────────────────────── */
-function Row({ label, value, action, danger, onClick }: {
-  label: string; value?: string; action?: string;
-  danger?: boolean; onClick?: () => void;
-}) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 0", borderBottom: "1px solid var(--rule-soft)",
-        cursor: onClick ? "pointer" : "default",
-      }}
-    >
-      <div>
-        <p style={{ fontSize: "0.85rem", fontWeight: 500, color: danger ? "var(--red)" : "var(--ink)" }}>
-          {label}
-        </p>
-        {value && (
-          <p style={{ fontSize: "0.76rem", color: "var(--mid)", marginTop: 2 }}>{value}</p>
-        )}
-      </div>
-      {action && (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.76rem", color: danger ? "var(--red)" : "var(--mid)" }}>
-          {action} <ChevronRight size={12} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      border: "1px solid var(--rule)", borderRadius: 8,
-      padding: "4px 20px", marginBottom: 20, background: "var(--white)",
-    }}>
-      {children}
-    </div>
-  );
-}
-
-/* ── Nav items ───────────────────────────────────────────────────────────── */
-const NAV = [
-  { id: "profile",  label: "Profile",            icon: User       },
-  { id: "saved",    label: "Saved properties",    icon: Heart      },
-  { id: "viewings", label: "Viewings",            icon: Calendar   },
-  { id: "alerts",   label: "Alerts",              icon: Bell       },
-  { id: "settings", label: "Settings",            icon: Settings   },
-  { id: "faq",      label: "FAQ",                 icon: HelpCircle },
-  { id: "support",  label: "Support",             icon: Mail       },
-  { id: "privacy",  label: "Privacy policy",      icon: Shield     },
-  { id: "terms",    label: "Terms & conditions",  icon: FileText   },
-  { id: "landlord", label: "Landlord portal",     icon: Building2, soon: true },
+const NAV_DEFS = [
+  { id: "profile",  label: "Profile",           icon: "◍" },
+  { id: "saved",    label: "Saved properties",   icon: "♥" },
+  { id: "viewings", label: "Viewings",            icon: "▣" },
+  { id: "alerts",   label: "Alerts",              icon: "◔" },
+  { id: "settings", label: "Settings",            icon: "⚙" },
+  { id: "faq",      label: "FAQ",                 icon: "?" },
+  { id: "support",  label: "Support",             icon: "✉" },
+  { id: "privacy",  label: "Privacy policy",      icon: "⛨" },
+  { id: "terms",    label: "Terms & conditions",  icon: "▤" },
+  { id: "landlord", label: "Landlord portal",     icon: "⌂", soon: true },
 ];
 
-/* ── Section content ─────────────────────────────────────────────────────── */
-function ProfileSection({ user, logout }: { user: any; logout: () => void }) {
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: "50%",
-          background: "var(--ink)", color: "var(--white)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontFamily: "var(--font-display)", fontSize: "1.3rem", fontWeight: 900,
-        }}>
-          {user?.full_name?.[0]?.toUpperCase() ?? "?"}
-        </div>
-        <div>
-          <p style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--ink)" }}>{user?.full_name || "—"}</p>
-          <p style={{ fontSize: "0.78rem", color: "var(--mid)" }}>{user?.email}</p>
-          {!user?.is_verified && (
-            <p style={{ fontSize: "0.72rem", color: "var(--orange)", marginTop: 2 }}>Email not verified</p>
-          )}
-        </div>
-      </div>
-      <Card>
-        <Row label="Full name" value={user?.full_name || "Not set"} action="Edit" />
-        <Row label="Email"     value={user?.email}                  action="Change" />
-        <Row label="Phone"     value="Not set"                      action="Add" />
-        <Row label="Password"  value="••••••••••••"                 action="Change" />
-      </Card>
-      <Card>
-        <Row label="Search intent"      value={user?.intent || "Not set"} action="Edit" />
-        <Row label="Max budget"         value={user?.max_budget ? "£" + user.max_budget.toLocaleString() : "Not set"} action="Edit" />
-        <Row label="Preferred counties" value="Not set" action="Edit" />
-      </Card>
-      <Card>
-        <Row label="Export my data" action="Download JSON" onClick={() => {}} />
-        <Row label="Delete account" action="Delete" danger onClick={() => {
-          if (confirm("This will permanently delete your account and all data. Cannot be undone.")) logout();
-        }} />
-      </Card>
-    </div>
-  );
-}
+const TITLES: Record<Section, [string, string]> = {
+  profile:  ["Profile",           "Manage your details and preferences."],
+  saved:    ["Saved properties",  "3 properties saved."],
+  viewings: ["Viewings",          "Your booked and requested viewings."],
+  alerts:   ["Alerts",            "2 active alerts."],
+  settings: ["Settings",          "Notifications, language and security."],
+  faq:      ["FAQ",               "Answers to the questions we hear most."],
+  support:  ["Support",           "We aim to respond within 24 hours."],
+  privacy:  ["Privacy policy",    "How we handle your data."],
+  terms:    ["Terms & conditions","The rules for using Nave."],
+  landlord: ["Landlord portal",   "List your space directly on Nave."],
+};
 
-function SavedSection({ favs, navigate }: { favs: any[]; navigate: (s: string) => void }) {
-  return (
-    <div>
-      <p style={{ fontSize: "0.85rem", color: "var(--mid)", marginBottom: 20 }}>
-        {favs?.length ?? 0} properties saved
-      </p>
-      {!favs?.length ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--mid)" }}>
-          <Heart size={28} strokeWidth={1} style={{ margin: "0 auto 12px" }} />
-          <p style={{ fontSize: "0.85rem" }}>No saved properties yet.</p>
-          <button
-            onClick={() => navigate("/")}
-            style={{ marginTop: 16, fontSize: "0.82rem", fontWeight: 500, padding: "8px 20px", border: "1px solid var(--rule)", borderRadius: 100, background: "none", cursor: "pointer", color: "var(--ink)" }}
-          >
-            Start searching
-          </button>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {favs.map((f: any) => (
-            <div
-              key={f.id}
-              style={{ border: "1px solid var(--rule)", borderRadius: 8, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: "var(--white)" }}
-              onClick={() => navigate("/properties/" + (f.property_id || f.id))}
-            >
-              <div>
-                <p style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: 2, color: "var(--ink)" }}>{f.property?.title ?? "Saved property"}</p>
-                <p style={{ fontSize: "0.75rem", color: "var(--mid)" }}>{f.property?.location ?? ""}{f.property?.price_raw ? " · " + f.property.price_raw : ""}</p>
-              </div>
-              <ChevronRight size={14} color="var(--mid)" />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+const FAQ = [
+  { q: "How does Nave source its listings?", a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals and the Charities Commission. Data refreshes every 3 hours." },
+  { q: "What does the match score mean?", a: "The score reflects suitability for your stated purpose — based on listing details, planning status, location and comparable transactions." },
+  { q: "How do pre-market signals work?", a: "We monitor Charities Commission filings, Companies House dissolutions and planning applications. These can give 6–18 months advance notice before a property lists." },
+  { q: "Is my data safe?", a: "Yes. AES-256 encryption, UK data centres, ICO registered. Export or delete your data at any time from your profile." },
+  { q: "Can I get WhatsApp alerts?", a: "Yes — add your phone number in Profile and enable WhatsApp alerts in Settings." },
+  { q: "What is a magic link?", a: "A one-time secure sign-in link sent to your email. No password required. Expires in 15 minutes, single use only." },
+];
 
-function ViewingsSection() {
-  return (
-    <div style={{ textAlign: "center", padding: "40px 0", color: "var(--mid)" }}>
-      <Calendar size={28} strokeWidth={1} style={{ margin: "0 auto 12px" }} />
-      <p style={{ fontSize: "0.85rem" }}>No viewings booked yet.</p>
-      <p style={{ fontSize: "0.78rem", marginTop: 6, maxWidth: 280, margin: "8px auto 0" }}>
-        When you request viewings through Nave, they'll appear here.
-      </p>
-    </div>
-  );
-}
+const PRIVACY = [
+  { h: "What we collect", b: "Email address, name, search preferences and saved properties. We collect only what is necessary for the service." },
+  { h: "How we use it", b: "To provide property search, alerts and match analysis. We do not sell your data or share it with advertisers." },
+  { h: "Lawful basis", b: "Contract (your account), legitimate interest (improving the service) and consent (optional analytics). You can withdraw consent at any time." },
+  { h: "Data retention", b: "Account data is kept while your account is active. Search history is retained for 90 days. Audit logs are kept for 7 years." },
+  { h: "Your rights", b: "Access, rectification, erasure, portability and objection under UK GDPR. Contact privacy@nave.co.uk." },
+];
 
-function AlertsSection({ alerts, navigate }: { alerts: any[]; navigate: (s: string) => void }) {
-  return (
-    <div>
-      <p style={{ fontSize: "0.85rem", color: "var(--mid)", marginBottom: 16 }}>
-        {alerts?.length ?? 0} active alerts
-      </p>
-      <button
-        onClick={() => navigate("/alerts")}
-        style={{ fontSize: "0.82rem", fontWeight: 500, padding: "8px 20px", border: "1px solid var(--rule)", borderRadius: 100, background: "none", cursor: "pointer", color: "var(--ink)", marginBottom: 20 }}
-      >
-        Manage alerts
-      </button>
-      {alerts?.map((a: any) => (
-        <div key={a.id} style={{ border: "1px solid var(--rule)", borderRadius: 8, padding: "14px 16px", marginBottom: 8, background: "var(--white)" }}>
-          <p style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: 2, color: "var(--ink)" }}>{a.name}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--mid)" }}>{a.query}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+const TERMS = [
+  { h: "Service description", b: "Nave aggregates publicly available property listings and provides match analysis. We are not an estate agent and do not act on your behalf in any transaction." },
+  { h: "Analysis disclaimer", b: "Match scores are indicative only. They do not constitute professional property, legal or financial advice. Always instruct qualified professionals before purchasing." },
+  { h: "Data accuracy", b: "Listing data is sourced from third parties. We cannot guarantee accuracy or availability. Always verify directly with the source." },
+  { h: "Acceptable use", b: "You may not scrape, automate or resell data from Nave. The service is for personal property search only." },
+  { h: "Governing law", b: "These terms are governed by English law. Disputes are subject to the exclusive jurisdiction of English courts." },
+];
 
-function SettingsSection({ logout }: { logout: () => void }) {
-  return (
-    <div>
-      <Card>
-        <Row label="Email notifications" value="Enabled"         action="Toggle" />
-        <Row label="WhatsApp alerts"      value="Disabled"        action="Toggle" />
-        <Row label="Weekly digest"        value="Monday mornings" action="Edit"   />
-        <Row label="Alert frequency"      value="Immediate"       action="Edit"   />
-      </Card>
-      <Card>
-        <Row label="Language" value="English (UK)" action="Change" />
-        <Row label="Currency" value="GBP £"         action="Change" />
-      </Card>
-      <Card>
-        <Row label="Two-factor authentication" value="Not enabled" action="Enable"    />
-        <Row label="Active sessions"           value="1 session"   action="View all" />
-        <Row label="Sign out all devices" danger action="Sign out" onClick={logout} />
-      </Card>
-    </div>
-  );
-}
+const row = (label: string, value?: string, action?: string, danger?: boolean) => ({
+  label, value, action, danger: !!danger,
+  hasValue: !!value,
+  labelColor: danger ? "#c0392b" : "var(--ink)",
+  actionColor: danger ? "#c0392b" : "var(--ink3)",
+});
 
-function FaqSection() {
-  const items = [
-    { q: "How does Nave source its listings?",   a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals, and the Charities Commission. Data refreshes every 3 hours." },
-    { q: "What does the AI score mean?",              a: "The conversion score (0–10) reflects suitability for your stated purpose — based on listing details, planning status, location, and comparable transactions." },
-    { q: "How do pre-market signals work?",           a: "We monitor Charities Commission filings, Companies House dissolutions, and planning applications. These can give 6–18 months advance notice before a property lists." },
-    { q: "Is my data safe?",                          a: "Yes. AES-256 encryption, UK data centres, ICO registered. Export or delete your data at any time from your profile." },
-    { q: "Can I get WhatsApp alerts?",                a: "Yes — add your phone number in Profile and enable WhatsApp alerts in Settings." },
-    { q: "What is a magic link?",                     a: "A one-time secure sign-in link sent to your email. No password required. Expires in 15 minutes, single use only." },
-  ];
-  return (
-    <div>
-      <style>{`details summary::-webkit-details-marker { display: none; }`}</style>
-      {items.map(({ q, a }) => (
-        <details key={q} style={{ borderBottom: "1px solid var(--rule-soft)", paddingBottom: 14, marginBottom: 14 }}>
-          <summary style={{ fontSize: "0.88rem", fontWeight: 600, cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center", color: "var(--ink)" }}>
-            {q} <ChevronRight size={14} color="var(--mid)" />
-          </summary>
-          <p style={{ fontSize: "0.82rem", color: "var(--mid)", lineHeight: 1.65, marginTop: 10 }}>{a}</p>
-        </details>
-      ))}
-    </div>
-  );
-}
+const PROFILE_CARDS = [
+  { rows: [row("Full name","Alex Mercer","Edit"), row("Email","alex@nave.co.uk","Change"), row("Phone","Not set","Add"), row("Password","••••••••••••","Change")] },
+  { rows: [row("Search intent","Conversion to a home","Edit"), row("Max budget","£250,000","Edit"), row("Preferred counties","Yorkshire, Lancashire","Edit")] },
+  { rows: [row("Export my data",undefined,"Download JSON"), row("Delete account",undefined,"Delete",true)] },
+];
 
-function SupportSection() {
-  return (
-    <div>
-      <p style={{ fontSize: "0.85rem", color: "var(--mid)", marginBottom: 24, lineHeight: 1.65 }}>
-        We read every message and aim to respond within 24 hours.
-      </p>
-      {[
-        { label: "Email support",   value: "support@sanctuary.co.uk", action: "Open email" },
-        { label: "Report a bug",    value: "Something not working?",  action: "Report"     },
-        { label: "Feature request", value: "Suggest something new",   action: "Suggest"    },
-      ].map(item => (
-        <div key={item.label} style={{ border: "1px solid var(--rule)", borderRadius: 8, padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--white)", marginBottom: 8 }}>
-          <div>
-            <p style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--ink)" }}>{item.label}</p>
-            <p style={{ fontSize: "0.75rem", color: "var(--mid)", marginTop: 2 }}>{item.value}</p>
-          </div>
-          <span style={{ fontSize: "0.76rem", color: "var(--mid)", cursor: "pointer" }}>{item.action} →</span>
-        </div>
-      ))}
-    </div>
-  );
-}
+const SETTINGS_CARDS = [
+  { rows: [row("Email notifications","Enabled","Toggle"), row("WhatsApp alerts","Disabled","Toggle"), row("Weekly digest","Monday mornings","Edit"), row("Alert frequency","Immediate","Edit")] },
+  { rows: [row("Language","English (UK)","Change"), row("Currency","GBP £","Change")] },
+  { rows: [row("Two-factor authentication","Not enabled","Enable"), row("Active sessions","1 session","View all"), row("Sign out all devices",undefined,"Sign out",true)] },
+];
 
-function PrivacySection() {
-  return (
-    <div style={{ fontSize: "0.84rem", color: "var(--mid)", lineHeight: 1.75 }}>
-      <p style={{ marginBottom: 16 }}><strong style={{ color: "var(--ink)" }}>Last updated:</strong> June 2026</p>
-      {[
-        { h: "What we collect",  b: "Email address, name, search preferences, and saved properties. We collect only what is necessary for the service." },
-        { h: "How we use it",    b: "To provide property search, alerts, and AI analysis. We do not sell your data or share it with advertisers." },
-        { h: "Lawful basis",     b: "Contract (your account), legitimate interest (improving the service), and consent (optional analytics). You can withdraw consent at any time." },
-        { h: "Data retention",   b: "Account data is kept while your account is active. Search history is retained for 90 days. Audit logs are kept for 7 years (legal obligation)." },
-        { h: "Your rights",      b: "Access, rectification, erasure, portability, and objection under UK GDPR. Contact privacy@sanctuary.co.uk." },
-        { h: "Third parties",    b: "We use Supabase (database, UK region), Sentry (error monitoring), and Anthropic (AI analysis). Each is GDPR-compliant." },
-      ].map(({ h, b }) => (
-        <div key={h} style={{ marginBottom: 18 }}>
-          <p style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>{h}</p>
-          <p>{b}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+const SAVED = [
+  { title: "St. Mark's Methodist Chapel", meta: "Halifax, West Yorkshire · £165,000" },
+  { title: "Wesleyan Chapel & Hall",       meta: "Barnsley, South Yorkshire · £119,000" },
+  { title: "Bethel Chapel",                meta: "Treorchy, Mid Glamorgan · £78,000" },
+];
 
-function TermsSection() {
-  return (
-    <div style={{ fontSize: "0.84rem", color: "var(--mid)", lineHeight: 1.75 }}>
-      <p style={{ marginBottom: 16 }}><strong style={{ color: "var(--ink)" }}>Last updated:</strong> June 2026</p>
-      {[
-        { h: "Service description",    b: "Nave aggregates publicly available property listings and provides AI-powered analysis. We are not an estate agent and do not act on your behalf in any transaction." },
-        { h: "AI analysis disclaimer", b: "AI scores are indicative only. They do not constitute professional property, legal, or financial advice. Always instruct qualified professionals before purchasing." },
-        { h: "Data accuracy",          b: "Listing data is sourced from third parties. We cannot guarantee accuracy or availability. Always verify directly with the source." },
-        { h: "Acceptable use",         b: "You may not scrape, automate, or resell data from Nave. The service is for personal property search only." },
-        { h: "Governing law",          b: "These terms are governed by English law. Disputes are subject to the exclusive jurisdiction of English courts." },
-      ].map(({ h, b }) => (
-        <div key={h} style={{ marginBottom: 18 }}>
-          <p style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>{h}</p>
-          <p>{b}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+const SUPPORT = [
+  { label: "Email support",   value: "support@nave.co.uk",    action: "Open email" },
+  { label: "Report a bug",    value: "Something not working?", action: "Report" },
+  { label: "Feature request", value: "Suggest something new",  action: "Suggest" },
+];
 
-function LandlordSection() {
-  return (
-    <div style={{ border: "1px solid var(--rule)", borderRadius: 8, padding: 32, textAlign: "center", background: "var(--white)" }}>
-      <Building2 size={32} strokeWidth={1} color="var(--mid)" style={{ margin: "0 auto 16px" }} />
-      <p style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: 8, color: "var(--ink)" }}>Coming soon</p>
-      <p style={{ fontSize: "0.82rem", color: "var(--mid)", lineHeight: 1.65, maxWidth: 320, margin: "0 auto 20px" }}>
-        List your church or gathering space directly on Nave. Reach verified buyers and track interest in real time.
-      </p>
-      <button style={{ fontSize: "0.82rem", fontWeight: 500, padding: "8px 20px", border: "1px solid var(--rule)", borderRadius: 100, background: "none", cursor: "pointer", color: "var(--ink)" }}>
-        Join the waitlist
-      </button>
-    </div>
-  );
-}
+const SIMPLE: Record<string, { icon: string; title: string; body: string; cta: string; href: string }> = {
+  viewings: { icon: "▣", title: "No viewings booked yet",  body: "When you request viewings through Nave, they'll appear here.", cta: "Browse properties", href: "/" },
+  alerts:   { icon: "◔", title: "2 active alerts",          body: "Manage the alerts that notify you when matching properties appear.", cta: "Go to alerts", href: "/alerts" },
+  landlord: { icon: "⌂", title: "Coming soon",              body: "List your church or gathering space directly on Nave. Reach verified buyers and track interest in real time.", cta: "Join the waitlist", href: "/account" },
+};
 
-/* ══════════════════════════════════════════════════════════════════════════
-   MAIN PAGE
-══════════════════════════════════════════════════════════════════════════ */
+const s: React.CSSProperties = {};
+
 export default function AccountPage() {
+  useSEO({ title: "Account — Nave" });
   const navigate = useNavigate();
-  const [active, setActive] = useState<string | null>(null);
+  const { user, logout } = useAuthStore();
+  const [active, setActive] = useState<Section>("profile");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const { data: user }   = useQuery({ queryKey: ["me"],          queryFn: authApi.me,          retry: false });
-  const { data: favs }   = useQuery({ queryKey: ["favourites"],  queryFn: favouritesApi.list });
-  const { data: alerts } = useQuery({ queryKey: ["alerts"],      queryFn: alertsApi.list });
+  const name = user?.name || "N";
+  const initial = name.charAt(0).toUpperCase();
+  const [title, sub] = TITLES[active];
 
-  function logout() {
-    localStorage.removeItem("sanctuary_token");
-    navigate("/auth");
-  }
-
-  /* ── Sub-page content ─────────────────────────────────────────────────── */
-  function renderActive() {
-    switch (active) {
-      case "profile":  return <ProfileSection  user={user} logout={logout} />;
-      case "saved":    return <SavedSection    favs={favs || []} navigate={navigate} />;
-      case "viewings": return <ViewingsSection />;
-      case "alerts":   return <AlertsSection   alerts={alerts || []} navigate={navigate} />;
-      case "settings": return <SettingsSection logout={logout} />;
-      case "faq":      return <FaqSection />;
-      case "support":  return <SupportSection />;
-      case "privacy":  return <PrivacySection />;
-      case "terms":    return <TermsSection />;
-      case "landlord": return <LandlordSection />;
-      default:         return null;
-    }
-  }
-
-  const activeNav = NAV.find(n => n.id === active);
+  const isText   = active === "privacy" || active === "terms";
+  const isSimple = active === "viewings" || active === "alerts" || active === "landlord";
+  const textItems = active === "terms" ? TERMS : PRIVACY;
+  const simple = SIMPLE[active] || SIMPLE.viewings;
 
   return (
-    <div style={{ fontFamily: "var(--font-body)", minHeight: "calc(100svh - 52px)" }}>
+    <main style={{ maxWidth: 1040, margin: "0 auto", padding: "50px 22px 90px", display: "grid", gridTemplateColumns: "240px 1fr", gap: 48, alignItems: "start", animation: "riseIn .6s cubic-bezier(.16,1,.3,1) both" }}>
 
-      {/* ── Desktop: two-column layout ──────────────────────────────────── */}
-      <style>{`
-        @media (min-width: 768px) {
-          .account-mobile-menu  { display: none !important; }
-          .account-mobile-sub   { display: none !important; }
-          .account-desktop      { display: grid !important; }
-        }
-        @media (max-width: 767px) {
-          .account-desktop      { display: none !important; }
-        }
-      `}</style>
-
-      {/* Desktop layout */}
-      <div
-        className="account-desktop wrap"
-        style={{ display: "none", gridTemplateColumns: "220px 1fr", gap: 40, paddingTop: 40, paddingBottom: 80 }}
-      >
-        {/* Sidebar */}
-        <div style={{ position: "sticky", top: 72, alignSelf: "start" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--rule-soft)" }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ink)", color: "var(--white)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "0.9rem", flexShrink: 0 }}>
-              {user?.full_name?.[0]?.toUpperCase() ?? "?"}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontWeight: 600, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink)" }}>{user?.full_name || "Your account"}</p>
-              <p style={{ fontSize: "0.72rem", color: "var(--mid)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || ""}</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {NAV.map(item => {
-              const Icon = item.icon;
-              const isActive = active === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => !(item as any).soon && setActive(item.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 6, border: "none", background: isActive ? "var(--ink)" : "transparent", color: isActive ? "var(--white)" : (item as any).soon ? "var(--mid)" : "var(--ink)", fontSize: "0.82rem", fontWeight: isActive ? 500 : 400, cursor: (item as any).soon ? "default" : "pointer", textAlign: "left", transition: "all .12s", fontFamily: "var(--font-body)" }}
-                >
-                  <Icon size={14} style={{ flexShrink: 0 }} />
-                  {item.label}
-                  {(item as any).soon && (
-                    <span style={{ marginLeft: "auto", fontSize: "0.6rem", fontWeight: 500, letterSpacing: ".06em", textTransform: "uppercase", background: "var(--rule-soft)", color: "var(--mid)", padding: "1px 5px", borderRadius: 3 }}>Soon</span>
-                  )}
-                </button>
-              );
-            })}
-            <button onClick={logout} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 6, border: "none", background: "transparent", color: "var(--red)", fontSize: "0.82rem", cursor: "pointer", textAlign: "left", marginTop: 8, fontFamily: "var(--font-body)" }}>
-              <LogOut size={14} style={{ flexShrink: 0 }} /> Log out
-            </button>
+      {/* Sidebar */}
+      <aside style={{ position: "sticky", top: 74 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 20, marginBottom: 18, borderBottom: "1px solid var(--line)" }}>
+          <span style={{ width: 42, height: 42, borderRadius: "50%", background: "var(--btnbg)", color: "var(--btnfg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Gabarito'", fontWeight: 800, fontSize: 17, flexShrink: 0 }}>{initial}</span>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ font: "600 14px 'Space Grotesk'", color: "var(--ink)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+            <p style={{ font: "400 12px 'Space Grotesk'", color: "var(--ink3)", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || ""}</p>
           </div>
         </div>
-
-        {/* Desktop main content */}
-        <div style={{ minWidth: 0 }}>
-          {active ? (
-            renderActive()
-          ) : (
-            <div>
-              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 900, letterSpacing: "-.03em", color: "var(--ink)", marginBottom: 8 }}>
-                Your account
-              </h2>
-              <p style={{ fontSize: "0.85rem", color: "var(--mid)", marginBottom: 24 }}>
-                Select a section from the menu.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Mobile: menu list ────────────────────────────────────────────── */}
-      <div className="account-mobile-menu" style={{ display: active ? "none" : "block", padding: "28px 20px 60px" }}>
-
-        {/* Avatar row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28, paddingBottom: 24, borderBottom: "1px solid var(--rule-soft)" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--ink)", color: "var(--white)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "1.1rem", flexShrink: 0 }}>
-            {user?.full_name?.[0]?.toUpperCase() ?? "?"}
-          </div>
-          <div>
-            <p style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--ink)" }}>{user?.full_name || "Your account"}</p>
-            <p style={{ fontSize: "0.78rem", color: "var(--mid)" }}>{user?.email || ""}</p>
-          </div>
-        </div>
-
-        {/* Menu items */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {NAV.map((item, idx) => {
-            const Icon = item.icon;
-            const soon = (item as any).soon;
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {NAV_DEFS.map(n => {
+            const isActive = n.id === active;
             return (
-              <button
-                key={item.id}
-                onClick={() => !soon && setActive(item.id)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 14,
-                  padding: "16px 4px",
-                  borderBottom: idx < NAV.length - 1 ? "1px solid var(--rule-soft)" : "none",
-                  border: "none", background: "none",
-                  cursor: soon ? "default" : "pointer",
-                  textAlign: "left", width: "100%",
-                  fontFamily: "var(--font-body)",
-                  opacity: soon ? 0.5 : 1,
-                }}
+              <button key={n.id}
+                onClick={() => { if (!n.soon) setActive(n.id as Section); }}
+                style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", padding: "9px 12px", borderRadius: 11, border: "none", background: isActive ? "var(--btnbg)" : "transparent", color: isActive ? "var(--btnfg)" : n.soon ? "var(--ink3)" : "var(--ink)", font: `${isActive ? 600 : 400} 13px 'Space Grotesk'`, cursor: n.soon ? "default" : "pointer", textAlign: "left" }}
               >
-                <Icon size={18} color="var(--mid)" style={{ flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: "0.95rem", fontWeight: 500, color: "var(--ink)" }}>
-                  {item.label}
-                </span>
-                {soon
-                  ? <span style={{ fontSize: "0.62rem", fontWeight: 500, letterSpacing: ".06em", textTransform: "uppercase", background: "var(--rule-soft)", color: "var(--mid)", padding: "2px 6px", borderRadius: 3 }}>Soon</span>
-                  : <ChevronRight size={16} color="var(--mid)" />
-                }
+                <span style={{ fontSize: 13, width: 15, textAlign: "center", flexShrink: 0, opacity: 0.85 }}>{n.icon}</span>
+                {n.label}
+                {n.soon && <span style={{ marginLeft: "auto", font: "500 9px 'Space Grotesk'", letterSpacing: "0.06em", textTransform: "uppercase", background: "var(--surface2)", color: "var(--ink3)", padding: "2px 6px", borderRadius: 5 }}>Soon</span>}
               </button>
             );
           })}
-
-          {/* Log out */}
-          <button
-            onClick={logout}
-            style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 4px", border: "none", background: "none", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "var(--font-body)", marginTop: 8 }}
-          >
-            <LogOut size={18} color="var(--red)" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: "0.95rem", fontWeight: 500, color: "var(--red)" }}>Log out</span>
+          <button onClick={() => { logout(); navigate("/"); }} style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", padding: "9px 12px", borderRadius: 11, border: "none", background: "transparent", color: "#c0392b", font: "400 13px 'Space Grotesk'", cursor: "pointer", textAlign: "left", marginTop: 6 }}>
+            <span style={{ width: 15, textAlign: "center", flexShrink: 0 }}>⏻</span>Log out
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* ── Mobile: sub-page ─────────────────────────────────────────────── */}
-      <div className="account-mobile-sub" style={{ display: active ? "block" : "none", padding: "28px 20px 60px" }}>
-        {active && activeNav && (
-          <SubPage title={activeNav.label} onBack={() => setActive(null)}>
-            {renderActive()}
-          </SubPage>
+      {/* Content */}
+      <section style={{ minWidth: 0 }}>
+        <h1 style={{ fontFamily: "'Gabarito'", fontWeight: 900, fontSize: 32, letterSpacing: "-0.03em", color: "var(--ink)", margin: "0 0 6px" }}>{title}</h1>
+        <p style={{ font: "300 16px 'Space Grotesk'", color: "var(--ink2)", margin: "0 0 28px" }}>{sub}</p>
+
+        {/* PROFILE */}
+        {active === "profile" && (
+          <div style={{ animation: "riseIn .35s ease both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 28 }}>
+              <span style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--btnbg)", color: "var(--btnfg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Gabarito'", fontWeight: 800, fontSize: 24 }}>{initial}</span>
+              <div>
+                <p style={{ font: "600 17px 'Space Grotesk'", color: "var(--ink)", margin: 0 }}>{name}</p>
+                <p style={{ font: "400 14px 'Space Grotesk'", color: "var(--ink3)", margin: "3px 0 0" }}>{user?.email || ""}</p>
+              </div>
+            </div>
+            {PROFILE_CARDS.map((card, ci) => (
+              <div key={ci} style={{ border: "1px solid var(--line)", borderRadius: 18, background: "var(--surface)", padding: "4px 22px", marginBottom: 16 }}>
+                {card.rows.map((r, ri) => (
+                  <div key={ri} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "15px 0", borderBottom: "1px solid var(--line3)" }}>
+                    <div>
+                      <p style={{ font: "500 14px 'Space Grotesk'", color: r.labelColor, margin: 0 }}>{r.label}</p>
+                      {r.hasValue && <p style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink3)", margin: "3px 0 0" }}>{r.value}</p>}
+                    </div>
+                    <span style={{ font: "400 13px 'Space Grotesk'", color: r.actionColor, whiteSpace: "nowrap", cursor: "pointer" }}>{r.action} ›</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         )}
-      </div>
 
-    </div>
+        {/* SAVED */}
+        {active === "saved" && (
+          <div style={{ animation: "riseIn .35s ease both", display: "flex", flexDirection: "column", gap: 10 }}>
+            {SAVED.map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: "16px 20px" }}>
+                <div>
+                  <p style={{ font: "600 15px 'Space Grotesk'", color: "var(--ink)", margin: 0 }}>{s.title}</p>
+                  <p style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink3)", margin: "3px 0 0" }}>{s.meta}</p>
+                </div>
+                <span style={{ color: "var(--ink3)", fontSize: 16 }}>›</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SETTINGS */}
+        {active === "settings" && (
+          <div style={{ animation: "riseIn .35s ease both" }}>
+            {SETTINGS_CARDS.map((card, ci) => (
+              <div key={ci} style={{ border: "1px solid var(--line)", borderRadius: 18, background: "var(--surface)", padding: "4px 22px", marginBottom: 16 }}>
+                {card.rows.map((r, ri) => (
+                  <div key={ri} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "15px 0", borderBottom: "1px solid var(--line3)" }}>
+                    <div>
+                      <p style={{ font: "500 14px 'Space Grotesk'", color: r.labelColor, margin: 0 }}>{r.label}</p>
+                      {r.hasValue && <p style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink3)", margin: "3px 0 0" }}>{r.value}</p>}
+                    </div>
+                    <span style={{ font: "400 13px 'Space Grotesk'", color: r.actionColor, whiteSpace: "nowrap", cursor: "pointer" }}>{r.action} ›</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* FAQ */}
+        {active === "faq" && (
+          <div style={{ animation: "riseIn .35s ease both", border: "1px solid var(--line)", borderRadius: 18, background: "var(--surface)", padding: "6px 24px" }}>
+            {FAQ.map((q, i) => (
+              <div key={i} style={{ borderBottom: "1px solid var(--line3)", padding: "16px 0" }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ font: "600 15px 'Space Grotesk'", color: "var(--ink)", cursor: "pointer", background: "none", border: "none", width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: 0 }}>
+                  {q.q}<span style={{ color: "var(--ink3)", fontSize: 15 }}>{openFaq === i ? "−" : "+"}</span>
+                </button>
+                {openFaq === i && <p style={{ font: "300 14px/1.65 'Space Grotesk'", color: "var(--ink2)", margin: "12px 0 0" }}>{q.a}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SUPPORT */}
+        {active === "support" && (
+          <div style={{ animation: "riseIn .35s ease both", display: "flex", flexDirection: "column", gap: 10 }}>
+            {SUPPORT.map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: "18px 20px" }}>
+                <div>
+                  <p style={{ font: "600 15px 'Space Grotesk'", color: "var(--ink)", margin: 0 }}>{s.label}</p>
+                  <p style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink3)", margin: "3px 0 0" }}>{s.value}</p>
+                </div>
+                <span style={{ font: "500 13px 'Space Grotesk'", color: "#6b70c2", whiteSpace: "nowrap", cursor: "pointer" }}>{s.action} →</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* PRIVACY / TERMS */}
+        {isText && (
+          <div style={{ animation: "riseIn .35s ease both", maxWidth: 620 }}>
+            <p style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink3)", margin: "0 0 22px" }}>Last updated · June 2026</p>
+            {textItems.map((t, i) => (
+              <div key={i} style={{ marginBottom: 22 }}>
+                <p style={{ font: "600 15px 'Space Grotesk'", color: "var(--ink)", margin: "0 0 5px" }}>{t.h}</p>
+                <p style={{ font: "300 14px/1.7 'Space Grotesk'", color: "var(--ink2)", margin: 0 }}>{t.b}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SIMPLE (viewings/alerts/landlord) */}
+        {isSimple && (
+          <div style={{ animation: "riseIn .35s ease both", border: "1px solid var(--line)", borderRadius: 22, background: "var(--surface)", padding: "52px 32px", textAlign: "center" }}>
+            <div style={{ width: 58, height: 58, borderRadius: "50%", background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px", fontSize: 24, color: "var(--ink3)" }}>{simple.icon}</div>
+            <p style={{ fontFamily: "'Gabarito'", fontWeight: 700, fontSize: 18, color: "var(--ink)", margin: "0 0 8px" }}>{simple.title}</p>
+            <p style={{ font: "300 15px/1.6 'Space Grotesk'", color: "var(--ink2)", margin: "0 auto 22px", maxWidth: 340 }}>{simple.body}</p>
+            <button onClick={() => navigate(simple.href)} style={{ display: "inline-block", background: "var(--btnbg)", color: "var(--btnfg)", borderRadius: 980, padding: "11px 24px", font: "500 14px 'Space Grotesk'", border: "none", cursor: "pointer" }}>{simple.cta}</button>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

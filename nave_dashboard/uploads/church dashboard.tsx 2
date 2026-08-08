@@ -1,0 +1,885 @@
+import { useState, useMemo, useEffect, useRef } from "react";
+
+// ─── DATA (from your pipeline HTML stats) ────────────────────────────────────
+const CONVERSION_TYPES = [
+  { id: "community",   label: "Community",   color: "#1D9E75", glow: "#1D9E7566", count: 361  },
+  { id: "hospitality", label: "Pub / Bar",   color: "#D85A30", glow: "#D85A3066", count: 71   },
+  { id: "residential", label: "Residential", color: "#378ADD", glow: "#378ADD66", count: 70   },
+  { id: "commercial",  label: "Commercial",  color: "#7F77DD", glow: "#7F77DD66", count: 66   },
+  { id: "arts",        label: "Arts",        color: "#D4537E", glow: "#D4537E66", count: 50   },
+  { id: "other_faith", label: "Other Faith", color: "#BA7517", glow: "#BA751766", count: 43   },
+  { id: "mosque",      label: "Mosque",      color: "#E24B4A", glow: "#E24B4A66", count: 40   },
+  { id: "education",   label: "Education",   color: "#639922", glow: "#63992266", count: 37   },
+  { id: "unknown",     label: "Unknown",     color: "#888780", glow: "#88878066", count: 1758 },
+];
+
+const TOTAL_RECORDS = 2496;
+const TOTAL_LISTED  = 48151;
+
+// Simulated UK regions with conversion breakdowns
+const REGIONS = [
+  { id: "london",      name: "Greater London",    dominant: "mosque",      pct: 28, records: 312 },
+  { id: "nw",          name: "North West",         dominant: "mosque",      pct: 22, records: 287 },
+  { id: "yorkshire",   name: "Yorkshire",          dominant: "residential", pct: 31, records: 198 },
+  { id: "west_mid",    name: "West Midlands",      dominant: "mosque",      pct: 35, records: 241 },
+  { id: "east_mid",    name: "East Midlands",      dominant: "community",   pct: 29, records: 167 },
+  { id: "east",        name: "East of England",    dominant: "residential", pct: 38, records: 143 },
+  { id: "south_east",  name: "South East",         dominant: "hospitality", pct: 26, records: 201 },
+  { id: "south_west",  name: "South West",         dominant: "arts",        pct: 24, records: 134 },
+  { id: "north_east",  name: "North East",         dominant: "community",   pct: 33, records: 89  },
+  { id: "wales",       name: "Wales",              dominant: "residential", pct: 41, records: 76  },
+  { id: "scotland",    name: "Scotland",            dominant: "arts",        pct: 27, records: 98  },
+  { id: "ni",          name: "Northern Ireland",   dominant: "community",   pct: 45, records: 44  },
+];
+
+// Sample map pins
+const PINS = [
+  { id:1,  lat:51.51, lon:-0.12,  type:"mosque",      name:"Former St Mary's, Whitechapel",      city:"London"      },
+  { id:2,  lat:51.52, lon:-0.09,  type:"mosque",      name:"Former Trinity Chapel, Stepney",      city:"London"      },
+  { id:3,  lat:53.48, lon:-2.24,  type:"mosque",      name:"Former St Alban's, Manchester",       city:"Manchester"  },
+  { id:4,  lat:53.80, lon:-1.55,  type:"mosque",      name:"Former St Joseph's, Leeds",           city:"Leeds"       },
+  { id:5,  lat:52.48, lon:-1.90,  type:"mosque",      name:"Former St Peter's, Birmingham",       city:"Birmingham"  },
+  { id:6,  lat:51.45, lon:-2.59,  type:"hospitality", name:"The Old Nave (pub), Bristol",         city:"Bristol"     },
+  { id:7,  lat:53.41, lon:-2.99,  type:"hospitality", name:"The Font (pub), Liverpool",           city:"Liverpool"   },
+  { id:8,  lat:51.50, lon:-0.14,  type:"hospitality", name:"The Church (cocktail bar), Soho",     city:"London"      },
+  { id:9,  lat:53.79, lon:-1.75,  type:"residential", name:"Chapel Mews Apartments, Bradford",    city:"Bradford"    },
+  { id:10, lat:51.38, lon:-2.36,  type:"residential", name:"The Old Chapel, Bath",                city:"Bath"        },
+  { id:11, lat:51.51, lon:-0.08,  type:"arts",        name:"Hackney Empire (theatre)",            city:"London"      },
+  { id:12, lat:53.47, lon:-2.23,  type:"arts",        name:"Manchester Arts Centre",              city:"Manchester"  },
+  { id:13, lat:55.86, lon:-4.25,  type:"arts",        name:"The Old Kirk Gallery, Glasgow",       city:"Glasgow"     },
+  { id:14, lat:51.88, lon:-2.07,  type:"community",   name:"Gloucester Community Hub",            city:"Gloucester"  },
+  { id:15, lat:52.92, lon:-1.47,  type:"community",   name:"Derby Community Church Centre",       city:"Derby"       },
+  { id:16, lat:52.48, lon:-1.91,  type:"other_faith", name:"Former Methodist, now Gurdwara",      city:"Birmingham"  },
+  { id:17, lat:51.52, lon:-0.07,  type:"other_faith", name:"Former Baptist Chapel, now Temple",   city:"London"      },
+  { id:18, lat:53.38, lon:-1.47,  type:"education",   name:"Former Christ Church, now Academy",   city:"Sheffield"   },
+  { id:19, lat:51.66, lon:-0.09,  type:"education",   name:"Former St Luke's, now Library",       city:"Tottenham"   },
+  { id:20, lat:54.97, lon:-1.61,  type:"commercial",  name:"Holy Trinity Gym, Newcastle",         city:"Newcastle"   },
+];
+
+// ─── COLOUR HELPERS ──────────────────────────────────────────────────────────
+function typeColor(id) {
+  return CONVERSION_TYPES.find(t => t.id === id)?.color ?? "#888780";
+}
+function typeGlow(id) {
+  return CONVERSION_TYPES.find(t => t.id === id)?.glow ?? "#88878033";
+}
+
+// ─── CUSTOM ICONS (SVG composites) ───────────────────────────────────────────
+function IconMosque({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Ghost cross fading */}
+      <line x1="12" y1="3" x2="12" y2="21" stroke="#E24B4A" strokeWidth="1.5" strokeOpacity="0.35" strokeDasharray="2 2"/>
+      <line x1="6" y1="8" x2="18" y2="8" stroke="#E24B4A" strokeWidth="1.5" strokeOpacity="0.35" strokeDasharray="2 2"/>
+      {/* Crescent */}
+      <path d="M16 12a6 6 0 1 1-8.49-5.49A7 7 0 0 0 16 12z" fill="#E24B4A" fillOpacity="0.9"/>
+      <circle cx="17" cy="7" r="1.2" fill="#E24B4A"/>
+    </svg>
+  );
+}
+
+function IconPub({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Ghost chalice */}
+      <path d="M10 4h4l-1 5h-2L10 4z" stroke="#D85A30" strokeWidth="1" strokeOpacity="0.35" fill="none" strokeDasharray="2 2"/>
+      <line x1="12" y1="9" x2="12" y2="13" stroke="#D85A30" strokeWidth="1" strokeOpacity="0.35" strokeDasharray="2 2"/>
+      {/* Martini glass */}
+      <path d="M7 5l5 7 5-7H7z" fill="#D85A30" fillOpacity="0.9"/>
+      <line x1="12" y1="12" x2="12" y2="18" stroke="#D85A30" strokeWidth="2"/>
+      <line x1="9" y1="18" x2="15" y2="18" stroke="#D85A30" strokeWidth="2"/>
+      <circle cx="15.5" cy="6.5" r="1.2" fill="#D85A30"/>
+    </svg>
+  );
+}
+
+function IconResidential({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Keys changing hands */}
+      <circle cx="8" cy="10" r="3.5" stroke="#378ADD" strokeWidth="1.5" fill="none"/>
+      <circle cx="8" cy="10" r="1.5" fill="#378ADD" fillOpacity="0.6"/>
+      <path d="M10.5 12.5l6 6" stroke="#378ADD" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M14.5 16l1.5-1.5M16 17.5l1.5-1.5" stroke="#378ADD" strokeWidth="1.5" strokeLinecap="round"/>
+      {/* Receiving hand */}
+      <path d="M18 19c0 0-2-1-4-3" stroke="#378ADD" strokeWidth="1" strokeOpacity="0.5" strokeDasharray="1.5 1.5"/>
+    </svg>
+  );
+}
+
+function IconArts({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Ghost rose window becoming stage curtains */}
+      <circle cx="12" cy="11" r="6" stroke="#D4537E" strokeWidth="1" strokeOpacity="0.3" strokeDasharray="2 2" fill="none"/>
+      <path d="M6 5c0 0 3 4 6 4s6-4 6-4" stroke="#D4537E" strokeWidth="1.5" fill="none"/>
+      <path d="M6 5v12" stroke="#D4537E" strokeWidth="1.5"/>
+      <path d="M18 5v12" stroke="#D4537E" strokeWidth="1.5"/>
+      <path d="M6 17c0 0 3-3 6-3s6 3 6 3" stroke="#D4537E" strokeWidth="1" strokeOpacity="0.6" fill="none"/>
+      <circle cx="12" cy="11" r="2" fill="#D4537E" fillOpacity="0.7"/>
+    </svg>
+  );
+}
+
+function IconCommunity({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="2.5" fill="#1D9E75" fillOpacity="0.8"/>
+      <circle cx="15" cy="8" r="2.5" fill="#1D9E75" fillOpacity="0.8"/>
+      <circle cx="12" cy="15" r="2.5" fill="#1D9E75"/>
+      <path d="M9 10.5c0 2 1.3 3.5 3 4.2M15 10.5c0 2-1.3 3.5-3 4.2" stroke="#1D9E75" strokeWidth="1" strokeOpacity="0.5"/>
+    </svg>
+  );
+}
+
+function IconOtherFaith({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Ghost cross */}
+      <line x1="12" y1="4" x2="12" y2="20" stroke="#BA7517" strokeWidth="1" strokeOpacity="0.3" strokeDasharray="2 2"/>
+      <line x1="6" y1="9" x2="18" y2="9" stroke="#BA7517" strokeWidth="1" strokeOpacity="0.3" strokeDasharray="2 2"/>
+      {/* Star of David / Khanda / general faith */}
+      <polygon points="12,4 14.5,9 20,9 15.5,13 17,18.5 12,15.5 7,18.5 8.5,13 4,9 9.5,9" fill="#BA7517" fillOpacity="0.85"/>
+    </svg>
+  );
+}
+
+function IconEducation({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Bible becoming textbook */}
+      <rect x="6" y="5" width="12" height="15" rx="1.5" fill="#639922" fillOpacity="0.85"/>
+      <line x1="9" y1="9" x2="15" y2="9" stroke="#0D0D12" strokeWidth="1.2"/>
+      <line x1="9" y1="12" x2="15" y2="12" stroke="#0D0D12" strokeWidth="1.2"/>
+      <line x1="9" y1="15" x2="13" y2="15" stroke="#0D0D12" strokeWidth="1.2"/>
+      <line x1="12" y1="5" x2="12" y2="20" stroke="#639922" strokeWidth="0.8" strokeOpacity="0.4"/>
+    </svg>
+  );
+}
+
+function IconCommercial({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Dumbbell / cross hybrid */}
+      <rect x="3" y="10" width="5" height="4" rx="1" fill="#7F77DD" fillOpacity="0.85"/>
+      <rect x="16" y="10" width="5" height="4" rx="1" fill="#7F77DD" fillOpacity="0.85"/>
+      <line x1="8" y1="12" x2="16" y2="12" stroke="#7F77DD" strokeWidth="3"/>
+      <line x1="12" y1="6" x2="12" y2="18" stroke="#7F77DD" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="2 2"/>
+    </svg>
+  );
+}
+
+function IconUnknown({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8" stroke="#888780" strokeWidth="1.5" fill="none" strokeDasharray="3 2"/>
+      <text x="12" y="17" textAnchor="middle" fontSize="12" fill="#888780" fontFamily="serif">?</text>
+    </svg>
+  );
+}
+
+function ConversionIcon({ type, size = 22 }) {
+  switch(type) {
+    case "mosque":      return <IconMosque size={size}/>;
+    case "hospitality": return <IconPub size={size}/>;
+    case "residential": return <IconResidential size={size}/>;
+    case "arts":        return <IconArts size={size}/>;
+    case "community":   return <IconCommunity size={size}/>;
+    case "other_faith": return <IconOtherFaith size={size}/>;
+    case "education":   return <IconEducation size={size}/>;
+    case "commercial":  return <IconCommercial size={size}/>;
+    default:            return <IconUnknown size={size}/>;
+  }
+}
+
+// ─── STAINED GLASS UK MAP (SVG) ──────────────────────────────────────────────
+// Simplified but recognisable UK outline as SVG paths, divided into regions
+// Each region glows with the jewel colour of its dominant conversion type
+
+function StainedGlassMap({ selectedRegion, onRegionClick, activeFilters }) {
+  // Very simplified UK region polygons (schematic, not geographic-accurate)
+  // In production these would be GeoJSON paths via D3 projection
+  const regions = [
+    { id:"scotland",  label:"Scotland",         d:"M 95 20 L 135 15 L 155 35 L 145 65 L 120 80 L 90 75 L 75 55 L 85 35 Z", dominant:"arts"        },
+    { id:"ni",        label:"N. Ireland",        d:"M 55 75 L 85 70 L 90 90 L 65 95 Z",                                       dominant:"community"   },
+    { id:"north_east",label:"North East",        d:"M 130 90 L 155 85 L 165 110 L 145 120 L 125 115 Z",                       dominant:"community"   },
+    { id:"nw",        label:"North West",        d:"M 95 90 L 130 90 L 125 115 L 105 125 L 85 110 Z",                         dominant:"mosque"      },
+    { id:"yorkshire", label:"Yorkshire",         d:"M 130 90 L 165 90 L 170 120 L 145 120 L 125 115 Z",                       dominant:"residential" },
+    { id:"wales",     label:"Wales",             d:"M 75 130 L 100 120 L 110 145 L 100 165 L 75 160 L 65 145 Z",              dominant:"residential" },
+    { id:"west_mid",  label:"West Midlands",     d:"M 100 120 L 130 118 L 135 140 L 115 150 L 100 145 Z",                     dominant:"mosque"      },
+    { id:"east_mid",  label:"East Midlands",     d:"M 130 118 L 162 115 L 165 140 L 140 148 L 130 140 Z",                     dominant:"community"   },
+    { id:"east",      label:"East of England",   d:"M 155 135 L 185 130 L 192 160 L 168 168 L 148 158 Z",                     dominant:"residential" },
+    { id:"south_west",label:"South West",        d:"M 65 165 L 110 162 L 120 190 L 100 210 L 65 200 L 55 182 Z",              dominant:"arts"        },
+    { id:"south_east",label:"South East",        d:"M 115 160 L 185 155 L 192 185 L 160 200 L 125 195 L 112 178 Z",           dominant:"hospitality" },
+    { id:"london",    label:"London",            d:"M 140 162 L 162 160 L 165 175 L 148 178 Z",                               dominant:"mosque"      },
+  ];
+
+  return (
+    <svg
+      viewBox="0 0 250 230"
+      style={{ width: "100%", height: "100%", filter: "drop-shadow(0 0 18px #0008)" }}
+    >
+      <defs>
+        {/* Glass texture filter */}
+        <filter id="glass-texture" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" seed="4" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
+          <feComposite in="displaced" in2="SourceGraphic" operator="in"/>
+        </filter>
+        {/* Glow filter per region */}
+        {regions.map(r => (
+          <filter key={r.id} id={`glow-${r.id}`}>
+            <feGaussianBlur stdDeviation={selectedRegion === r.id ? "4" : "2"} result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        ))}
+        {/* Lead came (border) style */}
+        <style>{`
+          .region-path {
+            stroke: #0D0D18;
+            stroke-width: 2.5;
+            stroke-linejoin: round;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+          .region-path:hover { stroke-width: 3.5; }
+          .region-label {
+            font-family: 'Cinzel', serif;
+            font-size: 5.5px;
+            fill: rgba(255,255,255,0.75);
+            pointer-events: none;
+            text-anchor: middle;
+          }
+        `}</style>
+        {/* Inner glow for each region */}
+        <filter id="inner-glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+      </defs>
+
+      {/* Background — dark lead */}
+      <rect width="250" height="230" fill="#080810"/>
+
+      {/* Region panels */}
+      {regions.map(r => {
+        const col   = typeColor(r.dominant);
+        const isActive = activeFilters.length === 0 || activeFilters.includes(r.dominant);
+        const isSelected = selectedRegion === r.id;
+        const opacity = isActive ? (isSelected ? 1 : 0.78) : 0.18;
+
+        // Compute label centroid (simple bbox midpoint)
+        const pathEl = null; // centroid approximated manually
+        return (
+          <g key={r.id} onClick={() => onRegionClick(r.id)} style={{ filter: isSelected ? `drop-shadow(0 0 8px ${col})` : "none" }}>
+            <path
+              className="region-path"
+              d={r.d}
+              fill={col}
+              fillOpacity={opacity}
+              filter="url(#glass-texture)"
+            />
+            {/* Bright inner edge — simulates light through glass */}
+            <path
+              d={r.d}
+              fill="none"
+              stroke={col}
+              strokeWidth="0.8"
+              strokeOpacity={isActive ? 0.6 : 0.1}
+              style={{ pointerEvents: "none" }}
+            />
+          </g>
+        );
+      })}
+
+      {/* Lead came overlay (decorative lines through the map) */}
+      <line x1="110" y1="0" x2="110" y2="230" stroke="#0D0D18" strokeWidth="1" strokeOpacity="0.5"/>
+      <line x1="0" y1="120" x2="250" y2="120" stroke="#0D0D18" strokeWidth="1" strokeOpacity="0.5"/>
+
+      {/* Rose window circle overlay at centre */}
+      <circle cx="125" cy="115" r="55" fill="none" stroke="#1A1A2E" strokeWidth="1.5" strokeOpacity="0.6"/>
+      <circle cx="125" cy="115" r="35" fill="none" stroke="#1A1A2E" strokeWidth="1" strokeOpacity="0.4"/>
+
+      {/* Region labels */}
+      {[
+        { id:"scotland",   x:115, y:52  },
+        { id:"ni",         x:70,  y:83  },
+        { id:"north_east", x:147, y:104 },
+        { id:"nw",         x:108, y:108 },
+        { id:"yorkshire",  x:148, y:107 },
+        { id:"wales",      x:83,  y:145 },
+        { id:"west_mid",   x:115, y:136 },
+        { id:"east_mid",   x:147, y:132 },
+        { id:"east",       x:172, y:150 },
+        { id:"south_west", x:88,  y:188 },
+        { id:"south_east", x:152, y:177 },
+        { id:"london",     x:152, y:170 },
+      ].map(l => (
+        <text key={l.id} className="region-label" x={l.x} y={l.y}>
+          {regions.find(r=>r.id===l.id)?.label}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+// ─── MINI MAP WITH PINS ───────────────────────────────────────────────────────
+function MiniMap({ pins, activeFilters, onPinClick, selectedPin }) {
+  // Project lat/lon to SVG coords (simple linear for UK bounds)
+  function project(lat, lon) {
+    const x = ((lon - (-8.2)) / (2.2 - (-8.2))) * 320;
+    const y = ((61.0 - lat) / (61.0 - 49.5)) * 340;
+    return { x, y };
+  }
+
+  const filteredPins = activeFilters.length === 0
+    ? pins
+    : pins.filter(p => activeFilters.includes(p.type));
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%", background: "#0a0a14", borderRadius: 8, overflow: "hidden" }}>
+      {/* Grid lines */}
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.15 }}>
+        {[0,25,50,75,100].map(p => (
+          <g key={p}>
+            <line x1={`${p}%`} y1="0" x2={`${p}%`} y2="100%" stroke="#378ADD" strokeWidth="0.5"/>
+            <line x1="0" y1={`${p}%`} x2="100%" y2={`${p}%`} stroke="#378ADD" strokeWidth="0.5"/>
+          </g>
+        ))}
+      </svg>
+
+      {/* Pins */}
+      <svg viewBox="0 0 320 340" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
+        {filteredPins.map(pin => {
+          const { x, y } = project(pin.lat, pin.lon);
+          const col = typeColor(pin.type);
+          const isSelected = selectedPin?.id === pin.id;
+          return (
+            <g key={pin.id} onClick={() => onPinClick(pin)} style={{ cursor: "pointer" }}>
+              {/* Pulse ring */}
+              {isSelected && (
+                <circle cx={x} cy={y} r="14" fill="none" stroke={col} strokeWidth="1.5" opacity="0.5">
+                  <animate attributeName="r" from="10" to="20" dur="1.5s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" from="0.6" to="0" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+              )}
+              {/* Pin circle */}
+              <circle cx={x} cy={y} r={isSelected ? 8 : 5}
+                fill={col} fillOpacity="0.9"
+                stroke={isSelected ? "#fff" : col}
+                strokeWidth={isSelected ? 1.5 : 0.5}
+                style={{ filter: `drop-shadow(0 0 ${isSelected ? 8 : 4}px ${col})` }}
+              />
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Tooltip for selected pin */}
+      {selectedPin && (() => {
+        const { x, y } = project(selectedPin.lat, selectedPin.lon);
+        const col = typeColor(selectedPin.type);
+        const pctX = (x / 320) * 100;
+        const left = pctX > 60 ? "auto" : `${pctX + 3}%`;
+        const right = pctX > 60 ? `${100 - pctX + 3}%` : "auto";
+        return (
+          <div style={{
+            position: "absolute",
+            left, right,
+            top: `${(y / 340) * 100}%`,
+            transform: "translateY(-50%)",
+            background: "#14141F",
+            border: `1px solid ${col}44`,
+            borderLeft: `3px solid ${col}`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            maxWidth: 180,
+            zIndex: 10,
+            pointerEvents: "none",
+          }}>
+            <p style={{ margin: 0, fontSize: 11, color: col, fontFamily: "'Cinzel', serif", letterSpacing: 1 }}>
+              {selectedPin.type.toUpperCase().replace("_", " ")}
+            </p>
+            <p style={{ margin: "4px 0 2px", fontSize: 12, color: "#E8E6E0", fontWeight: 500, lineHeight: 1.3 }}>
+              {selectedPin.name}
+            </p>
+            <p style={{ margin: 0, fontSize: 11, color: "#888780" }}>{selectedPin.city}</p>
+          </div>
+        );
+      })()}
+
+      <p style={{ position: "absolute", bottom: 6, right: 8, fontSize: 10, color: "#44445A", margin: 0, fontFamily: "monospace" }}>
+        OSM + Wikidata • {filteredPins.length} sites
+      </p>
+    </div>
+  );
+}
+
+// ─── STAT CARD ───────────────────────────────────────────────────────────────
+function StatCard({ label, value, sub, accent }) {
+  return (
+    <div style={{
+      background: "#0F0F1C",
+      border: "1px solid #1E1E30",
+      borderLeft: `3px solid ${accent || "#378ADD"}`,
+      borderRadius: 8,
+      padding: "12px 14px",
+    }}>
+      <p style={{ margin: 0, fontSize: 11, color: "#888780", letterSpacing: "0.08em", fontFamily: "'Cinzel', serif" }}>{label}</p>
+      <p style={{ margin: "4px 0 2px", fontSize: 22, fontWeight: 600, color: "#E8E6E0", fontFamily: "'Cinzel', serif" }}>{value}</p>
+      {sub && <p style={{ margin: 0, fontSize: 11, color: "#636370" }}>{sub}</p>}
+    </div>
+  );
+}
+
+// ─── FILTER PILL ─────────────────────────────────────────────────────────────
+function FilterPill({ type, active, onClick }) {
+  const col = typeColor(type.id);
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "5px 10px",
+        background: active ? `${col}22` : "#0F0F1C",
+        border: `1px solid ${active ? col : "#1E1E30"}`,
+        borderRadius: 20,
+        cursor: "pointer",
+        color: active ? col : "#888780",
+        fontSize: 11,
+        fontFamily: "'Cinzel', serif",
+        letterSpacing: "0.05em",
+        transition: "all 0.2s",
+        boxShadow: active ? `0 0 8px ${col}44` : "none",
+      }}
+    >
+      <span style={{ width: 7, height: 7, borderRadius: 2, background: active ? col : "#333", flexShrink: 0 }}/>
+      {type.label}
+    </button>
+  );
+}
+
+// ─── SPARKLINE BAR ───────────────────────────────────────────────────────────
+function BreakdownBar({ data, total, activeFilters }) {
+  return (
+    <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 1, margin: "10px 0 4px" }}>
+      {data.filter(t => t.id !== "unknown").map(t => {
+        const w = (t.count / total) * 100;
+        const col = typeColor(t.id);
+        const dimmed = activeFilters.length > 0 && !activeFilters.includes(t.id);
+        return (
+          <div key={t.id} title={`${t.label}: ${t.count}`} style={{
+            width: `${w}%`, background: col, opacity: dimmed ? 0.2 : 1, transition: "opacity 0.3s",
+            boxShadow: dimmed ? "none" : `0 0 4px ${col}88`,
+          }}/>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── DATA TABLE ──────────────────────────────────────────────────────────────
+function DataTable({ pins, activeFilters }) {
+  const rows = activeFilters.length === 0 ? pins : pins.filter(p => activeFilters.includes(p.type));
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: "Inter, sans-serif" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid #1E1E30" }}>
+            {["Type", "Former Building", "City", "Coordinates"].map(h => (
+              <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#888780", fontWeight: 500,
+                fontSize: 10, letterSpacing: "0.1em", fontFamily: "'Cinzel', serif" }}>
+                {h.toUpperCase()}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(pin => {
+            const col = typeColor(pin.type);
+            return (
+              <tr key={pin.id} style={{ borderBottom: "1px solid #14141F" }}
+                onMouseEnter={e => e.currentTarget.style.background = "#14141F"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <td style={{ padding: "8px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <ConversionIcon type={pin.type} size={16}/>
+                    <span style={{ color: col, fontSize: 10, letterSpacing: "0.08em", fontFamily: "'Cinzel', serif" }}>
+                      {pin.type.replace("_", " ").toUpperCase()}
+                    </span>
+                  </div>
+                </td>
+                <td style={{ padding: "8px 12px", color: "#C8C6C0" }}>{pin.name}</td>
+                <td style={{ padding: "8px 12px", color: "#888780" }}>{pin.city}</td>
+                <td style={{ padding: "8px 12px", color: "#44445A", fontFamily: "monospace", fontSize: 11 }}>
+                  {pin.lat.toFixed(3)}°N, {Math.abs(pin.lon).toFixed(3)}°W
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
+export default function App() {
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [selectedPin, setSelectedPin]   = useState(null);
+  const [showTable, setShowTable]       = useState(false);
+
+  function toggleFilter(id) {
+    setActiveFilters(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }
+
+  // Compute live stats based on active filters and region
+  const visibleTypes = activeFilters.length === 0 ? CONVERSION_TYPES : CONVERSION_TYPES.filter(t => activeFilters.includes(t.id));
+  const filteredTotal = visibleTypes.reduce((s, t) => s + t.count, 0);
+  const topType = visibleTypes.sort((a,b) => b.count - a.count)[0];
+  const regionData = selectedRegion ? REGIONS.find(r => r.id === selectedRegion) : null;
+
+  const FONT = `"Cinzel", "Palatino Linotype", serif`;
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#080810",
+      color: "#E8E6E0",
+      fontFamily: "Inter, system-ui, sans-serif",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      {/* Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@400;500&display=swap');
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0F0F1C; }
+        ::-webkit-scrollbar-thumb { background: #1E1E30; border-radius: 3px; }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.9; }
+        }
+      `}</style>
+
+      {/* ── HEADER ── */}
+      <header style={{
+        padding: "14px 24px",
+        borderBottom: "1px solid #1A1A2E",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        background: "#0A0A14",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* Stained glass cross icon */}
+          <svg width="32" height="32" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="6" fill="#0F0F1C"/>
+            <line x1="16" y1="5" x2="16" y2="27" stroke="#E24B4A" strokeWidth="2.5"/>
+            <line x1="8" y1="12" x2="24" y2="12" stroke="#E24B4A" strokeWidth="2.5"/>
+            <rect x="13" y="2" width="6" height="5" fill="#E24B4A" fillOpacity="0.2" rx="1"/>
+          </svg>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 17, fontFamily: FONT, fontWeight: 600, letterSpacing: "0.12em", color: "#E8E6E0" }}>
+              SACRED SPACES
+            </h1>
+            <p style={{ margin: 0, fontSize: 10, color: "#888780", letterSpacing: "0.15em" }}>
+              UK CHURCH CONVERSION INTELLIGENCE
+            </p>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#1D9E75", animation: "pulse-glow 2s ease-in-out infinite" }}/>
+          <span style={{ fontSize: 11, color: "#888780", letterSpacing: "0.1em" }}>LIVE DATA</span>
+          <span style={{ fontSize: 11, color: "#44445A", marginLeft: 12 }}>48,151 churches tracked</span>
+        </div>
+      </header>
+
+      {/* ── FILTER BAR ── */}
+      <div style={{
+        padding: "10px 24px",
+        borderBottom: "1px solid #1A1A2E",
+        background: "#0A0A14",
+        display: "flex",
+        gap: 6,
+        flexWrap: "wrap",
+        alignItems: "center",
+      }}>
+        <span style={{ fontSize: 10, color: "#44445A", letterSpacing: "0.1em", fontFamily: FONT, marginRight: 4 }}>FILTER:</span>
+        {CONVERSION_TYPES.filter(t => t.id !== "unknown").map(t => (
+          <FilterPill
+            key={t.id}
+            type={t}
+            active={activeFilters.includes(t.id)}
+            onClick={() => toggleFilter(t.id)}
+          />
+        ))}
+        {activeFilters.length > 0 && (
+          <button
+            onClick={() => setActiveFilters([])}
+            style={{
+              background: "none", border: "1px solid #333", borderRadius: 20,
+              color: "#888780", fontSize: 11, padding: "5px 10px", cursor: "pointer",
+              fontFamily: FONT, letterSpacing: "0.05em",
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "260px 1fr 1fr", gap: 0, minHeight: 0 }}>
+
+        {/* ── LEFT: STATS PANEL ── */}
+        <aside style={{
+          borderRight: "1px solid #1A1A2E",
+          padding: "16px",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          background: "#0A0A14",
+        }}>
+          <p style={{ margin: 0, fontSize: 10, letterSpacing: "0.15em", color: "#44445A", fontFamily: FONT }}>
+            {regionData ? `— ${regionData.name.toUpperCase()} —` : "— NATIONAL OVERVIEW —"}
+          </p>
+
+          <StatCard
+            label="CONFIRMED CONVERSIONS"
+            value={regionData ? regionData.records.toLocaleString() : filteredTotal.toLocaleString()}
+            sub={regionData ? `${regionData.pct}% of regional stock` : "across all sources"}
+            accent="#E24B4A"
+          />
+          <StatCard
+            label="LISTED CHURCH BUILDINGS"
+            value={TOTAL_LISTED.toLocaleString()}
+            sub="Historic England NHLE"
+            accent="#7F77DD"
+          />
+          <StatCard
+            label="DATA CONFIDENCE"
+            value="70%"
+            sub="Wikidata · OSM · NHLE"
+            accent="#1D9E75"
+          />
+
+          {/* Breakdown bar */}
+          <div>
+            <p style={{ margin: 0, fontSize: 10, letterSpacing: "0.1em", color: "#44445A", fontFamily: FONT }}>
+              CONVERSION BREAKDOWN
+            </p>
+            <BreakdownBar
+              data={CONVERSION_TYPES}
+              total={TOTAL_RECORDS}
+              activeFilters={activeFilters}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 8 }}>
+              {CONVERSION_TYPES.filter(t => t.id !== "unknown").map(t => {
+                const pct = ((t.count / TOTAL_RECORDS) * 100).toFixed(1);
+                const col = typeColor(t.id);
+                const dimmed = activeFilters.length > 0 && !activeFilters.includes(t.id);
+                return (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 7, opacity: dimmed ? 0.3 : 1, transition: "opacity 0.3s" }}>
+                    <ConversionIcon type={t.id} size={14}/>
+                    <span style={{ fontSize: 11, color: "#C8C6C0", flex: 1 }}>{t.label}</span>
+                    <span style={{ fontSize: 11, color: col, fontVariantNumeric: "tabular-nums" }}>{t.count}</span>
+                    <span style={{ fontSize: 10, color: "#44445A", width: 36, textAlign: "right" }}>{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Notable stat */}
+          <div style={{
+            background: "#0F0F1C",
+            border: "1px solid #1E1E30",
+            borderRadius: 8,
+            padding: "12px 14px",
+            marginTop: 4,
+          }}>
+            <p style={{ margin: "0 0 6px", fontSize: 10, color: "#E24B4A", letterSpacing: "0.1em", fontFamily: FONT }}>INSIGHT</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#C8C6C0", lineHeight: 1.6 }}>
+              Pubs outnumber mosque conversions <strong style={{ color: "#D85A30" }}>1.8×</strong>. 
+              Community use is the <strong style={{ color: "#1D9E75" }}>largest</strong> confirmed conversion category.
+            </p>
+          </div>
+
+          {/* Region selector */}
+          <div>
+            <p style={{ margin: "0 0 6px", fontSize: 10, letterSpacing: "0.1em", color: "#44445A", fontFamily: FONT }}>
+              REGION
+            </p>
+            <select
+              value={selectedRegion || ""}
+              onChange={e => setSelectedRegion(e.target.value || null)}
+              style={{
+                width: "100%", background: "#0F0F1C", border: "1px solid #1E1E30",
+                color: "#C8C6C0", borderRadius: 6, padding: "7px 10px", fontSize: 12,
+                fontFamily: FONT, cursor: "pointer", outline: "none",
+              }}
+            >
+              <option value="">All UK</option>
+              {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+
+          {selectedRegion && regionData && (
+            <div style={{
+              background: `${typeColor(regionData.dominant)}11`,
+              border: `1px solid ${typeColor(regionData.dominant)}33`,
+              borderRadius: 8, padding: "10px 12px",
+            }}>
+              <p style={{ margin: "0 0 4px", fontSize: 10, color: typeColor(regionData.dominant), fontFamily: FONT, letterSpacing: "0.08em" }}>
+                DOMINANT CONVERSION
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ConversionIcon type={regionData.dominant} size={20}/>
+                <span style={{ fontSize: 14, color: "#E8E6E0", fontFamily: FONT }}>
+                  {CONVERSION_TYPES.find(t=>t.id===regionData.dominant)?.label}
+                </span>
+                <span style={{ fontSize: 13, color: typeColor(regionData.dominant), marginLeft: "auto", fontFamily: FONT }}>
+                  {regionData.pct}%
+                </span>
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* ── CENTRE: STAINED GLASS MAP ── */}
+        <div style={{
+          borderRight: "1px solid #1A1A2E",
+          display: "flex",
+          flexDirection: "column",
+          background: "#080810",
+        }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #1A1A2E", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={{ margin: 0, fontSize: 10, letterSpacing: "0.15em", color: "#44445A", fontFamily: FONT }}>
+              STAINED GLASS — REGIONAL OVERVIEW
+            </p>
+            <span style={{ fontSize: 10, color: "#44445A" }}>click a region to filter</span>
+          </div>
+
+          <div style={{ flex: 1, padding: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "100%", maxWidth: 380, aspectRatio: "250/230" }}>
+              <StainedGlassMap
+                selectedRegion={selectedRegion}
+                onRegionClick={id => setSelectedRegion(prev => prev === id ? null : id)}
+                activeFilters={activeFilters}
+              />
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div style={{ padding: "10px 16px", borderTop: "1px solid #1A1A2E", display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {CONVERSION_TYPES.filter(t => t.id !== "unknown").map(t => (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{
+                  width: 20, height: 8, borderRadius: 2,
+                  background: typeColor(t.id),
+                  opacity: (activeFilters.length === 0 || activeFilters.includes(t.id)) ? 1 : 0.2,
+                  boxShadow: `0 0 4px ${typeColor(t.id)}88`,
+                }}/>
+                <span style={{ fontSize: 10, color: "#636370" }}>{t.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── RIGHT: PIN MAP ── */}
+        <div style={{ display: "flex", flexDirection: "column", background: "#080810" }}>
+          <div style={{
+            padding: "12px 16px", borderBottom: "1px solid #1A1A2E",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <p style={{ margin: 0, fontSize: 10, letterSpacing: "0.15em", color: "#44445A", fontFamily: FONT }}>
+              SITE MAP — {activeFilters.length === 0 ? PINS.length : PINS.filter(p => activeFilters.includes(p.type)).length} SITES
+            </p>
+            <button
+              onClick={() => setShowTable(p => !p)}
+              style={{
+                background: "#0F0F1C", border: "1px solid #1E1E30", borderRadius: 4,
+                color: "#888780", fontSize: 10, padding: "4px 8px", cursor: "pointer",
+                fontFamily: FONT, letterSpacing: "0.08em",
+              }}
+            >
+              {showTable ? "MAP" : "TABLE"}
+            </button>
+          </div>
+
+          <div style={{ flex: 1, padding: "12px", overflow: "hidden" }}>
+            {showTable ? (
+              <DataTable pins={PINS} activeFilters={activeFilters}/>
+            ) : (
+              <MiniMap
+                pins={PINS}
+                activeFilters={activeFilters}
+                onPinClick={pin => setSelectedPin(prev => prev?.id === pin.id ? null : pin)}
+                selectedPin={selectedPin}
+              />
+            )}
+          </div>
+
+          {/* Selected pin detail */}
+          {selectedPin && !showTable && (
+            <div style={{
+              padding: "12px 16px",
+              borderTop: "1px solid #1A1A2E",
+              background: "#0A0A14",
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+            }}>
+              <ConversionIcon type={selectedPin.type} size={28}/>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#E8E6E0", fontWeight: 500 }}>{selectedPin.name}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#888780" }}>
+                  {selectedPin.city} · {selectedPin.lat.toFixed(4)}°N {Math.abs(selectedPin.lon).toFixed(4)}°W
+                </p>
+              </div>
+              <div style={{
+                background: `${typeColor(selectedPin.type)}22`,
+                border: `1px solid ${typeColor(selectedPin.type)}44`,
+                borderRadius: 4, padding: "4px 8px",
+              }}>
+                <span style={{ fontSize: 10, color: typeColor(selectedPin.type), fontFamily: FONT, letterSpacing: "0.08em" }}>
+                  {selectedPin.type.replace("_"," ").toUpperCase()}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── FOOTER STATS BAR ── */}
+      <div style={{
+        borderTop: "1px solid #1A1A2E",
+        background: "#0A0A14",
+        padding: "10px 24px",
+        display: "flex",
+        gap: 32,
+        alignItems: "center",
+      }}>
+        {[
+          { label: "Total conversions tracked", value: TOTAL_RECORDS.toLocaleString(), col: "#E8E6E0" },
+          { label: "Mosque conversions",         value: "40",   col: "#E24B4A" },
+          { label: "Pub / bar conversions",      value: "71",   col: "#D85A30" },
+          { label: "Residential conversions",    value: "70",   col: "#378ADD" },
+          { label: "Community use",              value: "361",  col: "#1D9E75" },
+          { label: "Data sources",               value: "4",    col: "#7F77DD" },
+        ].map(s => (
+          <div key={s.label}>
+            <p style={{ margin: 0, fontSize: 10, color: "#44445A", letterSpacing: "0.08em" }}>{s.label.toUpperCase()}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 17, fontWeight: 600, color: s.col, fontFamily: FONT }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

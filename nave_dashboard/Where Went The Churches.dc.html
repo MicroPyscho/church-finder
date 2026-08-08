@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  .wwtc-root{
+    --bg:#14161d;--bg2:#1b1e27;--bg3:#232734;
+    --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);--bdg:rgba(201,162,58,.30);
+    --tx:#e7e3d6;--txd:#9aa0b0;--txf:#6b7186;--gold:#c9a23a;
+    --mapbg:#0b0d14;--head:rgba(17,19,26,.82);
+    --appbg:radial-gradient(140% 120% at 50% -8%,#1a1d27 0%,#14161d 46%,#0f1117 100%);
+    --shadow:0 10px 34px rgba(0,0,0,.55);
+    --card:linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,.008));
+    --tilefx:saturate(1.05) brightness(.94) contrast(1.05);
+  }
+  .wwtc-root[data-wwtc-theme="light"]{
+    --bg:#ece5d6;--bg2:#fcf9f2;--bg3:#f1ead9;
+    --bd:rgba(45,34,16,.13);--bd2:rgba(45,34,16,.22);--bdg:rgba(154,123,30,.42);
+    --tx:#2c2820;--txd:#6b6253;--txf:#9a917f;--gold:#9a7b1e;
+    --mapbg:#dde4e8;--head:rgba(252,249,242,.85);
+    --appbg:radial-gradient(140% 120% at 50% -8%,#f7f3ea 0%,#ece5d6 50%,#e2dbc9 100%);
+    --shadow:0 10px 30px rgba(70,55,30,.15);
+    --card:linear-gradient(160deg,rgba(255,255,255,.75),rgba(255,255,255,.35));
+    --tilefx:saturate(1.02);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#14161d;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  ::selection{background:rgba(201,162,58,0.32);color:#fff;}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:5px;}
+  select{-webkit-appearance:none;appearance:none;}
+  @keyframes wwtcRise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  @keyframes wwtcGlow{0%,100%{opacity:.5;}50%{opacity:1;}}
+  @keyframes wwtcDraw{from{stroke-dashoffset:var(--dl);}to{stroke-dashoffset:0;}}
+  /* Leaflet theming */
+  .leaflet-container{background:var(--mapbg)!important;font-family:'Spectral',Georgia,serif;outline:none;}
+  .wwtc-root .leaflet-tile-pane{filter:var(--tilefx);}
+  .leaflet-bar{border:1px solid var(--bd)!important;box-shadow:var(--shadow)!important;border-radius:6px!important;overflow:hidden;}
+  .leaflet-bar a{background:var(--bg2)!important;color:var(--tx)!important;border-bottom:1px solid var(--bd)!important;}
+  .leaflet-bar a:hover{background:var(--bg3)!important;}
+  .leaflet-control-attribution{background:rgba(8,9,14,.5)!important;color:var(--txf)!important;font-size:9px!important;}
+  .leaflet-control-attribution a{color:var(--txd)!important;}
+  .wwtc-root[data-wwtc-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,.6)!important;}
+  .leaflet-popup-content-wrapper{background:var(--bg2)!important;color:var(--tx)!important;border:1px solid var(--bdg)!important;border-radius:6px!important;box-shadow:var(--shadow)!important;}
+  .leaflet-popup-content{margin:11px 14px!important;font-family:'Spectral',serif;}
+  .leaflet-popup-tip{background:var(--bg2)!important;border:1px solid var(--bdg)!important;}
+  .leaflet-popup-close-button{color:var(--txf)!important;}
+  .leaflet-tooltip.wwtc-tip{background:var(--bg2);border:1px solid var(--bdg);color:var(--tx);font-family:'Cinzel',serif;font-size:11px;letter-spacing:.04em;border-radius:4px;box-shadow:var(--shadow);}
+  .leaflet-tooltip.wwtc-tip::before{display:none;}
+  .wwtc-region-path{transition:fill-opacity .25s, stroke-width .2s, stroke-opacity .2s;}
+  .wwtc-root[data-wwtc-theme="dark"] .leaflet-overlay-pane svg{filter:drop-shadow(0 0 5px rgba(201,162,58,.28));}
+  .wwtc-dots-canvas{pointer-events:none;}
+  .wwtc-scroll::-webkit-scrollbar{width:7px;}
+</style>
+</helmet>
+
+<div class="wwtc-root" data-wwtc-theme="{{ themeAttr }}" style="font-family:'Spectral',Georgia,serif;color:var(--tx);background:var(--appbg);min-height:100vh;display:flex;flex-direction:column;position:relative;overflow-x:hidden;">
+
+  <!-- ════════ HEADER ════════ -->
+  <header style="position:sticky;top:0;z-index:1200;backdrop-filter:saturate(140%) blur(14px);-webkit-backdrop-filter:saturate(140%) blur(14px);background:var(--head);border-bottom:1px solid var(--bdg);">
+    <div style="max-width:1520px;margin:0 auto;padding:0 clamp(14px,3vw,30px);height:66px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
+      <button onClick="{{ goAtlas }}" style="display:flex;align-items:center;gap:13px;background:none;border:none;cursor:pointer;padding:0;text-align:left;">
+        <span style="width:38px;height:46px;flex-shrink:0;display:block;">
+          <svg width="38" height="46" viewBox="0 0 38 46" fill="none" style="display:block;">
+            <path d="M2 18 Q2 2 19 2 Q36 2 36 18 V44 H2 Z" fill="var(--bg2)" stroke="var(--gold)" stroke-width="1.4"></path>
+            <path d="M19 9 V31 M11 17 H27" stroke="#b23a3a" stroke-width="2.4" stroke-linecap="round"></path>
+            <circle cx="19" cy="17" r="3.1" fill="var(--gold)"></circle>
+            <path d="M9 36 h20 M9 40 h20" stroke="var(--bdg)" stroke-width="1"></path>
+          </svg>
+        </span>
+        <span style="display:block;">
+          <span style="display:block;font-family:'Cinzel',serif;font-weight:700;font-size:clamp(15px,2vw,19px);letter-spacing:.03em;color:var(--tx);line-height:1;">Where Went the Churches</span>
+          <span style="display:block;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--txf);margin-top:5px;font-family:'Cinzel',serif;">A Visual Atlas · United Kingdom</span>
+        </span>
+      </button>
+
+      <div style="display:flex;align-items:center;gap:clamp(7px,1.4vw,14px);">
+        <button onClick="{{ toggleConf }}" title="Filter by evidence confidence" style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--bd);border-radius:980px;padding:7px 13px;cursor:pointer;color:var(--txd);font-family:'Cinzel',serif;font-size:11px;letter-spacing:.08em;" style-hover="border-color:var(--bdg);">
+          <span style="width:7px;height:7px;border-radius:50%;background:{{ confDot }};display:inline-block;"></span>{{ confLabel }}
+        </button>
+        <button onClick="{{ toggleTheme }}" title="Toggle light / dark" style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--bd);border-radius:980px;padding:7px 9px;cursor:pointer;color:var(--tx);" style-hover="border-color:var(--bdg);">
+          {{ themeIcon }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════ BREADCRUMB + NATION SWITCHER ════════ -->
+  <div style="position:relative;z-index:80;border-bottom:1px solid var(--bd);background:var(--head);">
+    <div style="max-width:1520px;margin:0 auto;padding:10px clamp(14px,3vw,30px);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+      <nav style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;">
+        <sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="1">
+          <button onClick="{{ c.go }}" style="background:none;border:none;cursor:{{ c.cursor }};padding:4px 6px;color:{{ c.color }};font-family:'Cinzel',serif;font-size:12px;letter-spacing:.06em;" style-hover="color:var(--tx);">{{ c.label }}</button>
+          <span style="color:var(--txf);font-size:11px;">{{ c.sep }}</span>
+        </sc-for>
+      </nav>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--txf);font-family:'Cinzel',serif;margin-right:2px;">Nations</span>
+        <sc-for list="{{ nationTabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.go }}" style="background:{{ t.bg }};border:1px solid {{ t.border }};border-radius:980px;padding:6px 13px;cursor:pointer;color:{{ t.color }};font-family:'Cinzel',serif;font-size:11px;letter-spacing:.04em;transition:all .2s;" style-hover="border-color:var(--bdg);">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ MAIN ════════ -->
+  <main style="position:relative;z-index:10;flex:1;width:100%;max-width:1520px;margin:0 auto;padding:clamp(16px,2.4vw,28px) clamp(14px,3vw,30px) 28px;">
+
+    <!-- ───── ATLAS ───── -->
+    <sc-if value="{{ isAtlas }}" hint-placeholder-val="{{ true }}">
+      <div style="animation:wwtcRise .6s cubic-bezier(.16,1,.3,1) both;display:flex;flex-direction:column;gap:clamp(16px,2vw,22px);">
+
+        <section style="text-align:center;padding:clamp(6px,1.6vw,20px) 0 2px;">
+          <p style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin:0 0 13px;">The Question</p>
+          <h1 style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(32px,5.6vw,64px);line-height:1.02;letter-spacing:-0.01em;margin:0;color:var(--tx);text-wrap:balance;">Where went<br>the churches?</h1>
+          <p style="font:300 clamp(15px,1.6vw,18px)/1.6 'Spectral';color:var(--txd);max-width:620px;margin:18px auto 0;text-wrap:pretty;">{{ heroSub }}</p>
+        </section>
+
+        <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:13px;">
+          <sc-for list="{{ nationPanels }}" as="n" hint-placeholder-count="4">
+            <button onClick="{{ n.go }}" style="position:relative;text-align:left;background:var(--card);border:1px solid var(--bd);border-top:2px solid {{ n.color }};border-radius:5px;padding:16px 17px 14px;cursor:pointer;overflow:hidden;transition:all .25s;" style-hover="border-color:var(--bdg);transform:translateY(-3px);">
+              <span style="position:absolute;right:-12px;top:-12px;width:64px;height:64px;border-radius:50%;background:{{ n.color }};opacity:.16;filter:blur(9px);"></span>
+              <span style="display:block;font-family:'Cinzel',serif;font-size:13px;letter-spacing:.06em;color:var(--txd);">{{ n.name }}</span>
+              <span style="display:block;font-family:'Cinzel',serif;font-weight:700;font-size:29px;color:var(--tx);margin:7px 0 2px;">{{ n.count }}</span>
+              <span style="display:block;font-size:12px;color:var(--txf);">mapped · mostly <span style="color:{{ n.color }};">{{ n.domLabel }}</span></span>
+            </button>
+          </sc-for>
+        </section>
+
+        <section style="display:flex;flex-wrap:wrap;gap:clamp(16px,2vw,22px);">
+          <!-- map centerpiece -->
+          <div style="flex:2.4 1 460px;display:flex;flex-direction:column;border:1px solid var(--bdg);border-radius:7px;background:var(--bg2);overflow:hidden;min-height:clamp(440px,58vh,640px);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bd);flex-wrap:wrap;">
+              <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--txd);">The Window · Living Atlas</span>
+              <div style="display:flex;background:var(--bg3);border:1px solid var(--bd);border-radius:980px;padding:2px;">
+                <sc-for list="{{ shadeTabs }}" as="s" hint-placeholder-count="2">
+                  <button onClick="{{ s.go }}" style="background:{{ s.bg }};border:none;border-radius:980px;padding:5px 12px;cursor:pointer;color:{{ s.color }};font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.08em;">{{ s.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="position:relative;flex:1;min-height:360px;">
+              <div ref="{{ setMapHost }}" data-wwtc-map="atlas" style="position:absolute;inset:0;"></div>
+              <div style="position:absolute;top:12px;left:14px;z-index:500;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txd);background:var(--head);padding:5px 9px;border-radius:4px;border:1px solid var(--bd);pointer-events:none;">{{ shadeNote }}</div>
+              <sc-if value="{{ hover.show }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:{{ hover.left }};top:{{ hover.top }};transform:translate(-50%,calc(-100% - 14px));background:var(--bg2);border:1px solid {{ hover.color }};border-left:3px solid {{ hover.color }};border-radius:4px;padding:8px 11px;max-width:230px;pointer-events:none;z-index:600;box-shadow:var(--shadow);">
+                  <p style="margin:0;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:{{ hover.color }};">{{ hover.type }}</p>
+                  <p style="margin:4px 0 0;font-size:12.5px;color:var(--tx);line-height:1.3;">{{ hover.name }}</p>
+                  <p style="margin:3px 0 0;font-size:11px;color:var(--txf);">{{ hover.sub }}</p>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px 15px;padding:12px 16px;border-top:1px solid var(--bd);">
+              <sc-for list="{{ legend }}" as="l" hint-placeholder-count="8">
+                <button onClick="{{ l.toggle }}" style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;opacity:{{ l.opacity }};transition:opacity .2s;">
+                  <span style="width:15px;height:8px;border-radius:2px;background:{{ l.color }};box-shadow:0 0 6px {{ l.color }};display:inline-block;"></span>
+                  <span style="font-size:11px;color:var(--txd);">{{ l.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- right rail -->
+          <div style="flex:1 1 290px;display:flex;flex-direction:column;gap:clamp(14px,1.6vw,18px);min-width:280px;">
+            <!-- donut -->
+            <div style="border:1px solid var(--bdg);border-radius:7px;background:var(--bg2);padding:18px;">
+              <p style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--txd);margin:0 0 4px;">Known Afterlives</p>
+              <p style="font-size:12px;color:var(--txf);margin:0 0 12px;">{{ donut.totalLabel }} buildings with a recorded new use</p>
+              <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+                <div style="position:relative;width:150px;height:150px;flex-shrink:0;margin:0 auto;">
+                  <svg viewBox="0 0 120 120" style="width:100%;height:100%;display:block;transform:rotate(-90deg);">
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="var(--bg3)" stroke-width="13"></circle>
+                    <sc-for list="{{ donut.segs }}" as="s" hint-placeholder-count="6">
+                      <circle cx="60" cy="60" r="46" fill="none" stroke="{{ s.color }}" stroke-width="13" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}" opacity="{{ s.opacity }}" style="transition:stroke-dasharray .6s,opacity .2s;"></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                    <span style="font-family:'Cinzel',serif;font-weight:700;font-size:26px;color:var(--tx);line-height:1;">{{ donut.centerNum }}</span>
+                    <span style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--txf);margin-top:3px;font-family:'Cinzel',serif;">known uses</span>
+                  </div>
+                </div>
+                <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:7px;">
+                  <sc-for list="{{ donut.rows }}" as="r" hint-placeholder-count="6">
+                    <button onClick="{{ r.toggle }}" style="display:flex;align-items:center;gap:9px;background:none;border:none;cursor:pointer;padding:0;opacity:{{ r.opacity }};transition:opacity .2s;">
+                      <span style="width:9px;height:9px;border-radius:2px;background:{{ r.color }};flex-shrink:0;display:inline-block;"></span>
+                      <span style="font-size:12.5px;color:var(--tx);flex:1;text-align:left;">{{ r.label }}</span>
+                      <span style="font-family:'Cinzel',serif;font-size:12.5px;color:var(--tx);font-variant-numeric:tabular-nums;">{{ r.count }}</span>
+                      <span style="font-size:11px;color:var(--txf);width:40px;text-align:right;font-variant-numeric:tabular-nums;">{{ r.pct }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <!-- ratio -->
+            <div style="border:1px solid var(--bd);border-radius:7px;background:var(--card);padding:18px;">
+              <p style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--txd);margin:0 0 14px;">The Headline Ratio</p>
+              <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;">
+                <span style="font-family:'Cinzel',serif;font-weight:700;font-size:40px;color:#C99A3A;line-height:1;">{{ ratioRes }}<span style="font-size:22px;color:var(--txf);">:1</span></span>
+                <span style="font-size:13px;color:var(--txd);line-height:1.4;">homes for every<br>mosque conversion</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#C99A3A;">Residential</span><span style="font-family:'Cinzel',serif;color:var(--tx);">{{ ratioResCount }}</span></div>
+                  <div style="height:7px;border-radius:4px;background:var(--bg3);overflow:hidden;"><span style="display:block;height:100%;width:100%;background:#C99A3A;box-shadow:0 0 7px #C99A3A;"></span></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#B23A3A;">Mosque</span><span style="font-family:'Cinzel',serif;color:var(--tx);">{{ ratioMosqueCount }}</span></div>
+                  <div style="height:7px;border-radius:4px;background:var(--bg3);overflow:hidden;"><span style="display:block;height:100%;width:{{ ratioMosqueW }};background:#B23A3A;box-shadow:0 0 7px #B23A3A;"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- timeline (awaiting) -->
+        <section style="border:1px dashed var(--bd2);border-radius:7px;background:var(--card);padding:16px 18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+            <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--txd);">Timeline of Conversion</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-family:'Cinzel',serif;">⌁ Awaiting full dataset</span>
+          </div>
+          <div style="position:relative;height:54px;display:flex;align-items:flex-end;gap:6px;opacity:.4;">
+            <sc-for list="{{ timelineBars }}" as="b" hint-placeholder-count="14">
+              <span style="flex:1;height:{{ b.h }};background:linear-gradient(180deg,var(--gold),transparent);border-radius:2px 2px 0 0;"></span>
+            </sc-for>
+          </div>
+          <p style="font-size:11.5px;color:var(--txf);margin:11px 0 0;font-style:italic;">Year &amp; decade of conversion are absent from the public release — this panel activates when the dated dataset is supplied.</p>
+        </section>
+
+      </div>
+    </sc-if>
+
+    <!-- ───── DRILL (nation / region / cluster) ───── -->
+    <sc-if value="{{ isMapLevel }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:wwtcRise .5s cubic-bezier(.16,1,.3,1) both;display:flex;flex-direction:column;gap:clamp(14px,1.8vw,20px);">
+
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div>
+            <p style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin:0 0 7px;">{{ levelKicker }}</p>
+            <h2 style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,3.6vw,40px);letter-spacing:-0.01em;color:var(--tx);margin:0;">{{ levelTitle }}</h2>
+            <p style="font:300 15px 'Spectral';color:var(--txd);margin:8px 0 0;">{{ levelSub }}</p>
+          </div>
+          <button onClick="{{ goBack }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:980px;padding:9px 18px;cursor:pointer;color:var(--txd);font-family:'Cinzel',serif;font-size:12px;letter-spacing:.06em;" style-hover="border-color:var(--bdg);">← {{ backLabel }}</button>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:clamp(14px,1.8vw,20px);">
+          <!-- map -->
+          <div style="flex:2.3 1 470px;position:relative;border:1px solid var(--bdg);border-radius:7px;background:var(--bg2);overflow:hidden;min-height:clamp(400px,56vh,600px);display:flex;flex-direction:column;">
+            <div style="position:relative;flex:1;min-height:360px;">
+              <div ref="{{ setMapHost }}" data-wwtc-map="drill" style="position:absolute;inset:0;"></div>
+              <div style="position:absolute;top:12px;left:14px;z-index:500;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--txd);background:var(--head);padding:5px 9px;border-radius:4px;border:1px solid var(--bd);pointer-events:none;">{{ mapHint }}</div>
+              <div style="position:absolute;bottom:11px;right:60px;z-index:500;font-size:10px;font-family:ui-monospace,monospace;color:var(--txf);background:var(--head);padding:3px 7px;border-radius:4px;pointer-events:none;">{{ mapCount }} sites</div>
+              <sc-if value="{{ hover.show }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:{{ hover.left }};top:{{ hover.top }};transform:translate(-50%,calc(-100% - 14px));background:var(--bg2);border:1px solid {{ hover.color }};border-left:3px solid {{ hover.color }};border-radius:4px;padding:8px 11px;max-width:230px;pointer-events:none;z-index:600;box-shadow:var(--shadow);">
+                  <p style="margin:0;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:{{ hover.color }};">{{ hover.type }}</p>
+                  <p style="margin:4px 0 0;font-size:12.5px;color:var(--tx);line-height:1.3;">{{ hover.name }}</p>
+                  <p style="margin:3px 0 0;font-size:11px;color:var(--txf);">{{ hover.sub }}</p>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- side -->
+          <aside class="wwtc-scroll" style="flex:1 1 300px;min-width:290px;display:flex;flex-direction:column;gap:13px;">
+            <div style="border:1px solid var(--bd);border-radius:7px;background:var(--bg2);padding:14px 16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+                <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txd);">Filter Conversions</span>
+                <button onClick="{{ clearFilters }}" style="background:none;border:none;cursor:pointer;color:var(--txf);font-size:11px;font-family:'Spectral';text-decoration:underline;padding:0;opacity:{{ clearOpacity }};">clear</button>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ filterPills }}" as="p" hint-placeholder-count="8">
+                  <button onClick="{{ p.toggle }}" style="display:flex;align-items:center;gap:6px;background:{{ p.bg }};border:1px solid {{ p.border }};border-radius:980px;padding:5px 11px;cursor:pointer;color:{{ p.color }};font-size:11px;font-family:'Spectral';transition:all .18s;">
+                    <span style="width:7px;height:7px;border-radius:2px;background:{{ p.dot }};display:inline-block;"></span>{{ p.label }} <span style="color:var(--txf);">{{ p.count }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="border:1px solid var(--bd);border-radius:7px;background:var(--bg2);padding:16px;">
+              <p style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txd);margin:0 0 13px;">Afterlives Here</p>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="position:relative;width:104px;height:104px;flex-shrink:0;">
+                  <svg viewBox="0 0 120 120" style="width:100%;height:100%;display:block;transform:rotate(-90deg);">
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="var(--bg3)" stroke-width="14"></circle>
+                    <sc-for list="{{ donut2.segs }}" as="s" hint-placeholder-count="5">
+                      <circle cx="60" cy="60" r="46" fill="none" stroke="{{ s.color }}" stroke-width="14" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}" style="transition:stroke-dasharray .5s;"></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                    <span style="font-family:'Cinzel',serif;font-weight:700;font-size:18px;color:var(--tx);line-height:1;">{{ donut2.centerNum }}</span>
+                    <span style="font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--txf);font-family:'Cinzel',serif;">known</span>
+                  </div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;">
+                  <sc-for list="{{ rankBars }}" as="b" hint-placeholder-count="5">
+                    <div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                        <span style="width:7px;height:7px;border-radius:2px;background:{{ b.color }};flex-shrink:0;display:inline-block;"></span>
+                        <span style="font-size:12px;color:var(--tx);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ b.label }}</span>
+                        <span style="font-family:'Cinzel',serif;font-size:12px;color:var(--tx);font-variant-numeric:tabular-nums;">{{ b.count }}</span>
+                      </div>
+                      <div style="height:5px;border-radius:3px;background:var(--bg3);overflow:hidden;"><span style="display:block;height:100%;width:{{ b.w }};background:{{ b.color }};box-shadow:0 0 5px {{ b.color }};"></span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="border:1px solid var(--bd);border-radius:7px;background:var(--bg2);padding:14px 16px;">
+              <button onClick="{{ toggleCompare }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;cursor:pointer;padding:0;">
+                <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--txd);">Compare vs UK average</span>
+                <span style="width:38px;height:21px;border-radius:980px;background:{{ compareTrackBg }};border:1px solid {{ compareTrackBorder }};position:relative;transition:all .2s;flex-shrink:0;">
+                  <span style="position:absolute;top:1.5px;left:{{ compareKnobLeft }};width:16px;height:16px;border-radius:50%;background:{{ compareKnobBg }};transition:all .2s;"></span>
+                </span>
+              </button>
+              <sc-if value="{{ compareOn }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+                  <sc-for list="{{ compareRows }}" as="c" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:8px;font-size:12px;">
+                      <span style="width:7px;height:7px;border-radius:2px;background:{{ c.color }};flex-shrink:0;display:inline-block;"></span>
+                      <span style="color:var(--txd);flex:1;">{{ c.label }}</span>
+                      <span style="font-family:'Cinzel',serif;color:var(--tx);font-variant-numeric:tabular-nums;">{{ c.here }}</span>
+                      <span style="color:var(--txf);font-size:11px;">vs</span>
+                      <span style="font-family:'Cinzel',serif;color:var(--txf);font-variant-numeric:tabular-nums;width:42px;text-align:right;">{{ c.uk }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ hasDrillList }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--bd);border-radius:7px;background:var(--bg2);padding:16px;">
+                <p style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txd);margin:0 0 12px;">{{ drillListLabel }}</p>
+                <div class="wwtc-scroll" style="display:flex;flex-direction:column;gap:7px;max-height:280px;overflow:auto;">
+                  <sc-for list="{{ drillList }}" as="d" hint-placeholder-count="6">
+                    <button onClick="{{ d.go }}" style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:5px;padding:9px 12px;cursor:pointer;transition:all .18s;" style-hover="border-color:var(--bdg);">
+                      <span style="width:8px;height:8px;border-radius:50%;background:{{ d.color }};box-shadow:0 0 6px {{ d.color }};flex-shrink:0;display:inline-block;"></span>
+                      <span style="font-size:13px;color:var(--tx);flex:1;text-align:left;">{{ d.label }}</span>
+                      <span style="font-family:'Cinzel',serif;font-size:12px;color:var(--txd);font-variant-numeric:tabular-nums;">{{ d.count }}</span>
+                      <span style="color:var(--txf);">›</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </aside>
+        </div>
+
+        <!-- table + awaiting -->
+        <div style="display:flex;flex-wrap:wrap;gap:clamp(14px,1.8vw,20px);">
+          <div style="flex:2.3 1 470px;border:1px solid var(--bd);border-radius:7px;background:var(--bg2);overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--bd);">
+              <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txd);">Records · showing {{ tableShown }} of {{ mapCount }}</span>
+              <span style="font-size:11px;color:var(--txf);font-style:italic;">click a row to open the building</span>
+            </div>
+            <div class="wwtc-scroll" style="max-height:330px;overflow:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:'Spectral';font-size:13px;">
+                <thead><tr style="position:sticky;top:0;background:var(--bg3);">
+                  <sc-for list="{{ tableCols }}" as="h" hint-placeholder-count="4">
+                    <th style="text-align:left;padding:9px 14px;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txf);font-weight:500;border-bottom:1px solid var(--bd);">{{ h }}</th>
+                  </sc-for>
+                </tr></thead>
+                <tbody>
+                  <sc-for list="{{ tableRows }}" as="r" hint-placeholder-count="6">
+                    <tr onClick="{{ r.open }}" style="cursor:pointer;border-bottom:1px solid var(--bd);" style-hover="background:var(--bg3);">
+                      <td style="padding:9px 14px;"><span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.color }};display:inline-block;"></span><span style="color:{{ r.color }};font-size:11px;font-family:'Cinzel',serif;letter-spacing:.03em;">{{ r.type }}</span></span></td>
+                      <td style="padding:9px 14px;color:var(--tx);">{{ r.name }}</td>
+                      <td style="padding:9px 14px;color:var(--txd);">{{ r.current }}</td>
+                      <td style="padding:9px 14px;color:var(--txf);font-family:ui-monospace,monospace;font-size:11px;">{{ r.coord }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="flex:1 1 300px;min-width:290px;border:1px dashed var(--bd2);border-radius:7px;background:var(--card);padding:16px 18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txd);">Deeper Layers</span>
+              <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-family:'Cinzel',serif;">⌁ Awaiting data</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px;">
+              <sc-for list="{{ awaitingItems }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex;align-items:flex-start;gap:11px;opacity:.78;">
+                  <span style="width:26px;height:26px;border-radius:5px;background:var(--bg3);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--txf);font-size:12px;">⌗</span>
+                  <div>
+                    <p style="margin:0;font-size:13px;color:var(--tx);font-family:'Cinzel',serif;letter-spacing:.02em;">{{ a.title }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--txf);line-height:1.4;">{{ a.desc }}</p>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ───── BUILDING ───── -->
+    <sc-if value="{{ isBuilding }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:wwtcRise .5s cubic-bezier(.16,1,.3,1) both;">
+        <button onClick="{{ goBack }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--bd);border-radius:980px;padding:9px 18px;cursor:pointer;color:var(--txd);font-family:'Cinzel',serif;font-size:12px;letter-spacing:.06em;margin-bottom:18px;" style-hover="border-color:var(--bdg);">← {{ backLabel }}</button>
+        <div style="display:flex;flex-wrap:wrap;gap:clamp(14px,1.8vw,20px);">
+          <!-- map of building -->
+          <div style="flex:1.4 1 400px;position:relative;border:1px solid var(--bdg);border-radius:7px;background:var(--bg2);overflow:hidden;min-height:clamp(340px,46vh,460px);">
+            <div ref="{{ setMapHost }}" data-wwtc-map="building" style="position:absolute;inset:0;"></div>
+          </div>
+          <!-- info -->
+          <div style="flex:1 1 320px;min-width:300px;display:flex;flex-direction:column;gap:14px;">
+            <div style="border:1px solid var(--bdg);border-radius:7px;background:var(--bg2);padding:22px;border-top:3px solid {{ building.color }};">
+              <span style="display:inline-block;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:{{ building.color }};background:{{ building.tint }};border:1px solid {{ building.color }};padding:3px 9px;border-radius:4px;margin-bottom:14px;">{{ building.type }}</span>
+              <h2 style="font-family:'Cinzel',serif;font-weight:700;font-size:clamp(22px,3vw,30px);color:var(--tx);margin:0;line-height:1.12;">{{ building.name }}</h2>
+              <p style="font:300 15px/1.5 'Spectral';color:var(--txd);margin:10px 0 0;">{{ building.lede }}</p>
+            </div>
+            <div style="border:1px solid var(--bd);border-radius:7px;background:var(--card);padding:18px;display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px;">
+              <sc-for list="{{ building.facts }}" as="f" hint-placeholder-count="6">
+                <div>
+                  <p style="margin:0;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--txf);">{{ f.label }}</p>
+                  <p style="margin:4px 0 0;font-size:14px;color:var(--tx);">{{ f.value }}</p>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border:1px dashed var(--bd2);border-radius:7px;background:var(--card);padding:16px 18px;">
+              <p style="margin:0 0 4px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);">⌁ Awaiting full dataset</p>
+              <p style="margin:0;font-size:12.5px;color:var(--txf);line-height:1.5;">Former denomination, sale price, local deprivation (IMD) and conversion year will appear here once the dated, enriched dataset is provided.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <!-- ════════ HEADLINE BAR ════════ -->
+  <footer style="position:sticky;bottom:0;z-index:90;border-top:1px solid var(--bdg);background:var(--head);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+    <div style="max-width:1520px;margin:0 auto;padding:11px clamp(14px,3vw,30px);display:flex;align-items:center;gap:clamp(12px,2.4vw,30px);overflow-x:auto;" class="wwtc-scroll">
+      <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);white-space:nowrap;flex-shrink:0;">Where went the churches?</span>
+      <sc-for list="{{ footStats }}" as="f" hint-placeholder-count="4">
+        <span style="display:flex;align-items:baseline;gap:7px;white-space:nowrap;flex-shrink:0;">
+          <span style="font-family:'Cinzel',serif;font-weight:700;font-size:15px;color:{{ f.color }};">{{ f.value }}</span>
+          <span style="font-size:11.5px;color:var(--txd);">{{ f.label }}</span>
+        </span>
+      </sc-for>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:960},&quot;startTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;shadeMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;use&quot;,&quot;density&quot;],&quot;default&quot;:&quot;use&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: "atlas",
+    nation: null, region: null, cluster: null, buildingIdx: null,
+    filters: [], confHigh: false, compare: false,
+    theme: "dark", shadeMode: "use",
+    hover: null,
+    agg: null, data: null, loaded: false,
+  };
+
+  // ───────── lifecycle ─────────
+  componentDidMount() {
+    let theme = this.props.startTheme || "dark";
+    try { const s = localStorage.getItem("wwtc-theme"); if (s) theme = s; } catch(e){}
+    const shadeMode = this.props.shadeMode || "use";
+    this.setState({ theme, shadeMode });
+    Promise.all([
+      fetch("assets/agg.json").then(r => r.json()).catch(() => null),
+      fetch("assets/points.json").then(r => r.json()).catch(() => null),
+    ]).then(([agg, data]) => {
+      if (data) {
+        const nb = {}; data.nations.forEach(n => nb[n] = {latMin:90,latMax:-90,lonMin:180,lonMax:-180});
+        for (const p of data.pts) { const n=data.nations[p[4]], b=nb[n];
+          b.latMin=Math.min(b.latMin,p[1]); b.latMax=Math.max(b.latMax,p[1]);
+          b.lonMin=Math.min(b.lonMin,p[0]); b.lonMax=Math.max(b.lonMax,p[0]); }
+        this._natBox = nb;
+        this._tidx = {}; data.types.forEach((t,i)=>this._tidx[t.id]=i);
+      }
+      this.setState({ agg, data, loaded: true }, () => this.refreshMap(true));
+    });
+    this._onResize = () => { if (this._map) { this._map.invalidateSize(); this.scheduleDots(); } };
+    window.addEventListener("resize", this._onResize);
+  }
+  componentWillUnmount() {
+    window.removeEventListener("resize", this._onResize);
+    this.teardownMap();
+  }
+  componentDidUpdate() {
+    const st = this.state;
+    const sig = [st.screen, st.nation, st.region, JSON.stringify(st.cluster), st.filters.join(","), st.confHigh, st.theme, st.shadeMode, st.buildingIdx].join("|");
+    const prev = this._lastSig;
+    this._lastSig = sig;
+    const themeChanged = this._lastTheme !== st.theme;
+    this._lastTheme = st.theme;
+    if (prev === undefined || prev !== sig) this.refreshMap(themeChanged);
+    else this.scheduleDots();
+  }
+
+  // ───────── helpers ─────────
+  typeById(id){ return (this.state.data?this.state.data.types:[]).find(t=>t.id===id); }
+  typeColor(id){ const t=this.typeById(id); return t?t.color:"#5A6072"; }
+  typeLabel(id){ const t=this.typeById(id); return t?t.label:id; }
+  fmt(n){ return (n||0).toLocaleString("en-GB"); }
+
+  go(patch){ this.setState({hover:null,...patch}); try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){} }
+  goAtlas(){ this.go({screen:"atlas",nation:null,region:null,cluster:null,buildingIdx:null}); }
+  goNation(n){ this.go({screen:"nation",nation:n,region:null,cluster:null}); }
+  goRegion(r){ const natOf={"Scotland":"Scotland","Wales":"Wales","Northern Ireland":"Northern Ireland"}; this.go({screen:"region",region:r,nation:natOf[r]||"England",cluster:null}); }
+  goCluster(c){ this.go({screen:"cluster",cluster:c}); }
+  goBuilding(idx){ this.go({screen:"building",buildingIdx:idx}); }
+  goBack(){ const s=this.state.screen;
+    if(s==="building") this.go({screen:this.state.cluster?"cluster":(this.state.region?"region":(this.state.nation?"nation":"atlas"))});
+    else if(s==="cluster") this.go({screen:"region",cluster:null});
+    else if(s==="region") this.go({screen:"nation",region:null});
+    else this.goAtlas();
+  }
+  toggleFilter(id){ this.setState(st=>({filters:st.filters.includes(id)?st.filters.filter(x=>x!==id):[...st.filters,id]})); }
+  clearFilters(){ this.setState({filters:[]}); }
+  toggleConf(){ this.setState(st=>({confHigh:!st.confHigh})); }
+  toggleCompare(){ this.setState(st=>({compare:!st.compare})); }
+  setShade(m){ this.setState({shadeMode:m}); }
+  toggleTheme(){ this.setState(st=>{ const t=st.theme==="dark"?"light":"dark"; try{localStorage.setItem("wwtc-theme",t);}catch(e){} return {theme:t}; }); }
+
+  // ───────── selection ─────────
+  geoFilter(p){ const {screen,nation,region,cluster,buildingIdx,data}=this.state;
+    if(screen==="building") return data.pts.indexOf(p)===buildingIdx;
+    if(screen==="cluster"&&cluster) return p[1]>=cluster.latMin&&p[1]<=cluster.latMax&&p[0]>=cluster.lonMin&&p[0]<=cluster.lonMax;
+    if(screen==="region"&&region) return data.regions[p[3]]===region;
+    if(screen==="nation"&&nation) return data.nations[p[4]]===nation;
+    return true;
+  }
+  passFilter(p){ const {filters,confHigh,data}=this.state;
+    if(confHigh&&p[5]!==1) return false;
+    if(filters.length&&!filters.includes(data.types[p[2]].id)) return false;
+    return true;
+  }
+  geoPts(){ return this.state.data?this.state.data.pts.filter(p=>this.geoFilter(p)):[]; }
+  visiblePts(){ return this.geoPts().filter(p=>this.passFilter(p)); }
+  countByType(pts){ const o={}; for(const p of pts){ const id=this.state.data.types[p[2]].id; o[id]=(o[id]||0)+1; } return o; }
+  regionsOfNation(n){ if(!this.state.data) return []; return this.state.data.regions.filter(r=> n==="England"?!["Scotland","Wales","Northern Ireland"].includes(r):r===n); }
+  currentRegion(){ const st=this.state;
+    if(st.region) return st.region;
+    if(st.cluster&&st.cluster.region) return st.cluster.region;
+    if(st.screen==="building"&&st.buildingIdx!=null&&st.data){ const p=st.data.pts[st.buildingIdx]; return st.data.regions[p[3]]; }
+    return null;
+  }
+
+  // ───────── Leaflet ─────────
+  setMapHost(el){
+    if(el){ if(this._mapEl!==el){ this._mapEl=el; this._mapMode=el.getAttribute("data-wwtc-map"); this.initMap(el); } }
+    else { this.teardownMap(); }
+  }
+  teardownMap(){ if(this._map){ try{this._map.remove();}catch(e){} } this._map=null; this._mapEl=null; this._choro=null; this._dotCanvas=null; }
+  tileUrl(){ return this.state.theme==="dark"
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"; }
+
+  initMap(el){
+    if(!window.L){ this._mapWait=setTimeout(()=>{ if(this._mapEl===el) this.initMap(el); },90); return; }
+    const L=window.L;
+    const map=L.map(el,{ zoomControl:true, attributionControl:true, preferCanvas:false, renderer:L.svg({padding:0.6}), minZoom:4, maxZoom:17, zoomSnap:0.25 });
+    map.setView([54.4,-3.2],5.4);
+    this._tile=L.tileLayer(this.tileUrl(),{ subdomains:"abcd", maxZoom:19, attribution:'&copy; OpenStreetMap, &copy; CARTO' }).addTo(map);
+    // dot canvas layer (overlayPane, pans with map, redraws on settle)
+    const self=this;
+    const DotLayer=L.Layer.extend({
+      onAdd:function(m){ this._m=m; const c=this._c=L.DomUtil.create("canvas","wwtc-dots-canvas leaflet-zoom-hide");
+        const s=m.getSize(); c.width=s.x; c.height=s.y; m.getPanes().overlayPane.appendChild(c);
+        m.on("moveend zoomend resize viewreset",this._reset,this); this._reset(); },
+      onRemove:function(m){ m.off("moveend zoomend resize viewreset",this._reset,this); if(this._c&&this._c.parentNode) this._c.parentNode.removeChild(this._c); },
+      _reset:function(){ const m=this._m,s=m.getSize(),tl=m.containerPointToLayerPoint([0,0]);
+        L.DomUtil.setPosition(this._c,tl);
+        const dpr=Math.min(window.devicePixelRatio||1,2);
+        this._c.width=s.x*dpr; this._c.height=s.y*dpr; this._c.style.width=s.x+"px"; this._c.style.height=s.y+"px";
+        self.paintDots(this._c,tl,dpr,s); },
+    });
+    this._dotLayer=new DotLayer(); this._dotLayer.addTo(map);
+    map.on("mousemove",e=>this.onMapHover(e));
+    map.on("click",e=>this.onMapClick(e));
+    this._map=map;
+    this.loadGeo().then(()=>this.refreshMap(true));
+    this.refreshMap(true);
+  }
+
+  loadGeo(){
+    if(this._geoPromise) return this._geoPromise;
+    const urls=[
+      "https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json",
+      "https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/eng/eer.json",
+    ];
+    const nameMap={ "North East":"North East","North West":"North West","Yorkshire and The Humber":"Yorkshire & Humber",
+      "East Midlands":"East Midlands","West Midlands":"West Midlands","Eastern":"East of England","London":"London",
+      "South East":"South East","South West":"South West","Wales":"Wales","Scotland":"Scotland" };
+    const tryUrl=(i)=>{ if(i>=urls.length) return Promise.resolve(null);
+      return fetch(urls[i]).then(r=>{ if(!r.ok) throw 0; return r.json(); }).catch(()=>tryUrl(i+1)); };
+    this._geoPromise=tryUrl(0).then(gj=>{
+      if(gj&&gj.features){ for(const f of gj.features){ const nm=(f.properties&&(f.properties.EER13NM||f.properties.name))||""; f.properties=f.properties||{}; f.properties.wwtcRegion=nameMap[nm]||nm; } }
+      this._geo=gj; return gj;
+    });
+    return this._geoPromise;
+  }
+
+  choroStyle(region){
+    const st=this.state, A=st.agg; const dark=st.theme==="dark";
+    let color="#6E7687", fillOp=dark?0.16:0.22;
+    if(A){
+      if(st.shadeMode==="density"){ const max=Math.max(1,...Object.values(A.regCount)); const v=(A.regCount[region]||0)/max;
+        color="#c9a23a"; fillOp=(dark?0.08:0.12)+v*(dark?0.42:0.5); }
+      else { color=this.typeColor(A.regDom[region]); fillOp=dark?0.20:0.28; }
+    }
+    const cur=this.currentRegion();
+    const scope=this.scopeRegions();
+    const inScope=!scope||scope.includes(region);
+    const isCur=cur===region;
+    return { color, weight:isCur?3:(inScope?1.8:0.7), opacity:inScope?(dark?0.95:0.85):0.3,
+      fillColor:color, fillOpacity:inScope?(isCur?fillOp+0.12:fillOp):(dark?0.04:0.05), className:"wwtc-region-path" };
+  }
+  scopeRegions(){ const st=this.state;
+    if(st.screen==="atlas") return null;
+    if(st.screen==="nation"&&st.nation) return this.regionsOfNation(st.nation);
+    const cr=this.currentRegion(); return cr?[cr]:null;
+  }
+
+  refreshMap(themeChanged){
+    const map=this._map, L=window.L; if(!map||!L||!this.state.data) return;
+    if(themeChanged&&this._tile){ this._tile.setUrl(this.tileUrl()); }
+    // choropleth
+    if(this._choro){ try{map.removeLayer(this._choro);}catch(e){} this._choro=null; }
+    if(this._geo){
+      const self=this;
+      this._choro=L.geoJSON(this._geo,{
+        style:f=>this.choroStyle(f.properties.wwtcRegion),
+        onEachFeature:(f,layer)=>{
+          const region=f.properties.wwtcRegion;
+          const A=this.state.agg; const cnt=A?(A.regCount[region]||0):0; const dom=A?this.typeLabel(A.regDom[region]):"";
+          layer.bindTooltip(`<b style="font-family:Cinzel">${region}</b><br>${this.fmt(cnt)} sites · mostly ${dom}`,{className:"wwtc-tip",sticky:true});
+          layer.on("mouseover",function(){ this.setStyle({weight:3,fillOpacity:Math.min(0.55,(self.choroStyle(region).fillOpacity)+0.18)}); });
+          layer.on("mouseout",function(){ self._choro.resetStyle(this); });
+          layer.on("add",function(){ if(this._path) this._path.__wwtcRegion=region; });
+        },
+      }).addTo(map);
+      this._choro.bringToBack();
+      // tag paths for elementFromPoint nav
+      this._choro.eachLayer(l=>{ if(l._path) l._path.__wwtcRegion=l.feature.properties.wwtcRegion; });
+    }
+    // fit bounds
+    const b=this.viewBounds();
+    if(b){ try{ map.fitBounds([[b.latMin,b.lonMin],[b.latMax,b.lonMax]],{padding:[24,24],animate:true,maxZoom:this.state.screen==="building"?15:12}); }catch(e){} }
+    // dots
+    this._dotSet=this.geoPts();
+    this.scheduleDots();
+  }
+  viewBounds(){ const st=this.state, A=st.agg;
+    if(st.screen==="building"&&st.buildingIdx!=null){ const p=st.data.pts[st.buildingIdx]; return {latMin:p[1]-0.03,latMax:p[1]+0.03,lonMin:p[0]-0.045,lonMax:p[0]+0.045}; }
+    if(st.screen==="cluster"&&st.cluster) return st.cluster;
+    if(st.screen==="region"&&st.region&&A){ const g=A.regGeo[st.region]; return {latMin:g.latMin,latMax:g.latMax,lonMin:g.lonMin,lonMax:g.lonMax}; }
+    if(st.screen==="nation"&&st.nation&&this._natBox) return this._natBox[st.nation];
+    return {latMin:49.9,latMax:59,lonMin:-8,lonMax:1.9};
+  }
+
+  scheduleDots(){ if(this._raf) cancelAnimationFrame(this._raf); this._raf=requestAnimationFrame(()=>{ if(this._dotLayer&&this._dotLayer._reset) this._dotLayer._reset(); }); }
+  paintDots(canvas,tl,dpr,size){
+    const map=this._map, L=window.L; if(!map) return;
+    const ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,size.x,size.y);
+    const pts=this._dotSet||[]; if(!pts.length) return;
+    const dark=this.state.theme==="dark"; const z=map.getZoom();
+    const rBase=z<5?1.0:z<6.5?1.5:z<8.5?2.1:z<11?2.8:3.6;
+    const D=this.state.data; const filters=this.state.filters, confHigh=this.state.confHigh;
+    // inactive first
+    for(const p of pts){ const passC=!confHigh||p[5]===1; const passT=!filters.length||filters.includes(D.types[p[2]].id); if(passC&&passT) continue;
+      const lp=map.latLngToLayerPoint([p[1],p[0]]); const x=lp.x-tl.x, y=lp.y-tl.y; if(x<-6||x>size.x+6||y<-6||y>size.y+6) continue;
+      ctx.beginPath(); ctx.arc(x,y,rBase*0.7,0,7); ctx.fillStyle=dark?"rgba(150,156,172,0.10)":"rgba(70,60,40,0.10)"; ctx.fill(); }
+    // active
+    for(const p of pts){ const passC=!confHigh||p[5]===1; const passT=!filters.length||filters.includes(D.types[p[2]].id); if(!(passC&&passT)) continue;
+      const t=D.types[p[2]]; const id=t.id, col=t.color, unknown=id==="unknown";
+      const lp=map.latLngToLayerPoint([p[1],p[0]]); const x=lp.x-tl.x, y=lp.y-tl.y; if(x<-8||x>size.x+8||y<-8||y>size.y+8) continue;
+      const r=unknown?rBase*0.8:rBase;
+      if(!unknown&&dark){ ctx.beginPath(); ctx.arc(x,y,r+3,0,7); ctx.fillStyle=col+"33"; ctx.fill(); }
+      ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fillStyle=unknown?(dark?"rgba(150,156,172,0.45)":"rgba(110,100,80,0.5)"):col; ctx.fill();
+      if(!unknown){ ctx.lineWidth=0.6; ctx.strokeStyle=dark?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.7)"; ctx.stroke(); }
+    }
+    // hover ring
+    const hv=this.state.hover;
+    if(hv&&hv.idx!=null){ const p=D.pts[hv.idx]; const lp=map.latLngToLayerPoint([p[1],p[0]]); const x=lp.x-tl.x,y=lp.y-tl.y;
+      ctx.beginPath(); ctx.arc(x,y,rBase+5,0,7); ctx.strokeStyle=dark?"#f3ecda":"#2c2820"; ctx.lineWidth=1.6; ctx.stroke(); }
+  }
+
+  pickDot(layerPoint){ const map=this._map, D=this.state.data; if(!map||!D) return null;
+    const pts=this.visiblePts(); let best=null,bd=121;
+    for(const p of pts){ const lp=map.latLngToLayerPoint([p[1],p[0]]); const dx=lp.x-layerPoint.x, dy=lp.y-layerPoint.y; const d=dx*dx+dy*dy; if(d<bd){bd=d;best=p;} }
+    return best?{p:best,idx:D.pts.indexOf(best)}:null;
+  }
+  onMapHover(e){ const hit=this.pickDot(e.layerPoint);
+    if(hit){ const cp=e.containerPoint; if(!this.state.hover||this.state.hover.idx!==hit.idx) this.setState({hover:{idx:hit.idx,left:cp.x+"px",top:cp.y+"px"}});
+      this._map.getContainer().style.cursor="pointer"; }
+    else { if(this.state.hover) this.setState({hover:null}); this._map.getContainer().style.cursor=""; }
+  }
+  onMapClick(e){
+    const hit=this.pickDot(e.layerPoint);
+    if(hit){ this.goBuilding(hit.idx); return; }
+    // region via element under pointer
+    const oe=e.originalEvent; const el=document.elementFromPoint(oe.clientX,oe.clientY);
+    if(el&&el.__wwtcRegion){ const reg=el.__wwtcRegion; if(["atlas","nation"].includes(this.state.screen)){ this.goRegion(reg); return; } }
+    // empty area at region level → form a cluster
+    if(this.state.screen==="region"){ const ll=e.latlng; const dLat=0.1,dLon=0.16;
+      this.goCluster({latMin:ll.lat-dLat,latMax:ll.lat+dLat,lonMin:ll.lng-dLon,lonMax:ll.lng+dLon,region:this.state.region,
+        label:ll.lat.toFixed(2)+"°N, "+Math.abs(ll.lng).toFixed(2)+"°"+(ll.lng<0?"W":"E")}); }
+  }
+
+  // ───────── donut builder ─────────
+  donutFrom(counts){
+    const D=this.state.data; const types=D?D.types.filter(t=>t.id!=="unknown"):[];
+    const arr=types.map(t=>({id:t.id,label:t.label,color:t.color,count:counts[t.id]||0})).filter(t=>t.count>0).sort((a,b)=>b.count-a.count);
+    const total=arr.reduce((s,t)=>s+t.count,0); const C=2*Math.PI*46;
+    let acc=0; const segs=[]; const top=arr.slice(0,7);
+    for(const t of top){ const frac=total?t.count/total:0; const len=frac*C;
+      const on=!this.state.filters.length||this.state.filters.includes(t.id);
+      segs.push({color:t.color,dash:len.toFixed(2)+" "+C.toFixed(2),offset:(-acc).toFixed(2),opacity:on?1:0.25}); acc+=len; }
+    const rows=top.map(t=>({label:t.label,color:t.color,count:this.fmt(t.count),pct:total?(t.count/total*100).toFixed(1)+"%":"0%",
+      toggle:()=>this.toggleFilter(t.id),opacity:(!this.state.filters.length||this.state.filters.includes(t.id))?1:0.35}));
+    return {segs,rows,total,totalLabel:this.fmt(total),centerNum:this.fmt(total)};
+  }
+
+  // ───────── render ─────────
+  renderVals(){
+    const st=this.state, A=st.agg, D=st.data; const screen=st.screen;
+    const types=D?D.types:[];
+    const total=A?A.total:23717, known=A?A.known:2701, unknown=A?A.unknown:21016;
+    const dark=st.theme==="dark";
+
+    const themeAttr=st.theme;
+    const themeIcon = dark
+      ? React.createElement("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none"},
+          React.createElement("circle",{cx:12,cy:12,r:4,fill:"#c9a23a"}),
+          React.createElement("g",{stroke:"#c9a23a","strokeWidth":1.6,"strokeLinecap":"round"},
+            ["M12 3v2","M12 19v2","M3 12h2","M19 12h2","M5.6 5.6l1.4 1.4","M17 17l1.4 1.4","M18.4 5.6L17 7","M7 17l-1.4 1.4"].map((d,i)=>React.createElement("path",{key:i,d}))))
+      : React.createElement("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none"},
+          React.createElement("path",{d:"M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z",fill:"#9a7b1e"}));
+
+    const confLabel=st.confHigh?"High confidence":"All evidence";
+    const confDot=st.confHigh?"#3E8E5A":"var(--gold)";
+
+    const crumbsRaw=[{label:"Atlas",go:()=>this.goAtlas()}];
+    if(st.nation) crumbsRaw.push({label:st.nation,go:()=>this.goNation(st.nation)});
+    if(st.region&&st.region!==st.nation) crumbsRaw.push({label:st.region,go:()=>this.goRegion(st.region)});
+    if(st.cluster) crumbsRaw.push({label:"Cluster",go:()=>this.goCluster(st.cluster)});
+    if(screen==="building") crumbsRaw.push({label:"Building",go:()=>{}});
+    const crumbs=crumbsRaw.map((c,i)=>({label:c.label,go:c.go,color:i===crumbsRaw.length-1?"var(--gold)":"var(--txd)",cursor:i===crumbsRaw.length-1?"default":"pointer",sep:i<crumbsRaw.length-1?"›":""}));
+
+    const nationNames=["England","Scotland","Wales","Northern Ireland"];
+    const nationTabs=nationNames.map(n=>{ const active=st.nation===n&&screen!=="atlas";
+      return {label:n==="Northern Ireland"?"N. Ireland":n,go:()=>this.goNation(n),
+        bg:active?"var(--bg3)":"transparent",border:active?"var(--bdg)":"var(--bd)",color:active?"var(--tx)":"var(--txd)"}; });
+
+    const footStats=[
+      {value:this.fmt(total),label:"buildings mapped",color:"var(--tx)"},
+      {value:this.fmt(known),label:"known new lives",color:"#C99A3A"},
+      {value:(A?A.ratios.resToMosque:46)+":1",label:"homes per mosque",color:"#B23A3A"},
+      {value:this.fmt(unknown),label:"fate unrecorded",color:"var(--txd)"},
+    ];
+
+    // atlas
+    const heroSub=`Across the United Kingdom, ${this.fmt(total)} former church buildings have been traced. Only ${this.fmt(known)} carry a recorded new purpose — the rest stand in silence. This is an atlas of what they became.`;
+    const tc=A?A.typeCount:{};
+    const knownTypes=types.filter(t=>t.id!=="unknown");
+    const ordered=knownTypes.map(t=>({...t,count:tc[t.id]||0})).sort((a,b)=>b.count-a.count);
+    const legend=ordered.slice(0,8).map(t=>({label:t.label,color:t.color,toggle:()=>this.toggleFilter(t.id),opacity:!st.filters.length||st.filters.includes(t.id)?1:0.3}));
+    const nationPanels=nationNames.map(n=>{ const dom=A?A.natDom[n]:"residential";
+      return {name:n==="Northern Ireland"?"N. Ireland":n,count:this.fmt(A?A.natCount[n]:0),color:this.typeColor(dom),domLabel:(this.typeLabel(dom)||"").toLowerCase(),go:()=>this.goNation(n)}; });
+    const donut=this.donutFrom(tc);
+    const ratioRes=A?A.ratios.resToMosque:46;
+    const ratioResCount=this.fmt(A?A.ratios.residential:1475);
+    const ratioMosqueCount=this.fmt(A?A.ratios.mosque:32);
+    const ratioMosqueW=((A?A.ratios.mosque:32)/(A?A.ratios.residential:1475)*100).toFixed(1)+"%";
+    const shadeTabs=[["use","Use"],["density","Density"]].map(([id,label])=>({label,go:()=>this.setShade(id),
+      bg:st.shadeMode===id?"var(--gold)":"transparent",color:st.shadeMode===id?(dark?"#14161d":"#fff"):"var(--txd)"}));
+    const shadeNote=st.shadeMode==="density"?"Regions shaded by site density":"Regions shaded by dominant new use";
+    const timelineBars=[18,32,40,55,70,82,90,76,60,48,38,28,20,14].map(h=>({h:h+"%"}));
+
+    // drill
+    const isMapLevel=["nation","region","cluster"].includes(screen);
+    let levelKicker="",levelTitle="",levelSub="",mapHint="",backLabel="Back";
+    const geo=D?this.geoPts():[]; const vis=D?this.visiblePts():[];
+    const geoByType=D?this.countByType(geo):{};
+    if(screen==="nation"){ levelKicker="Nation"; levelTitle=st.nation||""; levelSub=`${this.fmt(geo.length)} former churches traced across ${st.nation}.`; mapHint="Click a region to enter · click a glowing site to open it"; backLabel="Atlas"; }
+    else if(screen==="region"){ levelKicker="Region"; levelTitle=st.region||""; levelSub=`${this.fmt(geo.length)} buildings within ${st.region}.`; mapHint="Click a site to open · click empty map to form a cluster"; backLabel=st.nation||"Nation"; }
+    else if(screen==="cluster"){ levelKicker="Cluster"; levelTitle="Local cluster"; levelSub=st.cluster?`Around ${st.cluster.label} · ${this.fmt(geo.length)} buildings`:""; mapHint="Click any site to open its record"; backLabel=st.region||"Region"; }
+
+    const filterPills=ordered.filter(t=>(geoByType[t.id]||0)>0).map(t=>{ const on=st.filters.includes(t.id);
+      return {label:t.label,count:this.fmt(geoByType[t.id]||0),toggle:()=>this.toggleFilter(t.id),
+        bg:on?t.color+"22":"transparent",border:on?t.color:"var(--bd)",color:on?"var(--tx)":"var(--txd)",dot:t.color}; });
+    const clearOpacity=st.filters.length?1:0.3;
+    const rankMax=Math.max(1,...knownTypes.map(t=>geoByType[t.id]||0));
+    const rankBars=knownTypes.map(t=>({...t,count:geoByType[t.id]||0})).filter(t=>t.count>0).sort((a,b)=>b.count-a.count).slice(0,5)
+      .map(t=>({label:t.label,color:t.color,count:this.fmt(t.count),w:(t.count/rankMax*100)+"%"}));
+    const donut2=this.donutFrom(geoByType);
+
+    const compareOn=st.compare;
+    const geoKnown=Math.max(1,geo.length-(geoByType["unknown"]||0));
+    const ukKnown=Math.max(1,known);
+    const compareRows=["residential","community","mosque","education"].map(id=>({label:this.typeLabel(id),color:this.typeColor(id),
+      here:((geoByType[id]||0)/geoKnown*100).toFixed(1)+"%",uk:((tc[id]||0)/ukKnown*100).toFixed(1)+"%"}));
+    const compareTrackBg=compareOn?"var(--gold)":"var(--bg3)"; const compareTrackBorder=compareOn?"var(--bdg)":"var(--bd)";
+    const compareKnobLeft=compareOn?"19px":"2px"; const compareKnobBg=compareOn?(dark?"#14161d":"#fff"):"var(--txf)";
+
+    let hasDrillList=false,drillListLabel="",drillList=[];
+    if(screen==="nation"&&A){ hasDrillList=true; drillListLabel="Regions";
+      drillList=this.regionsOfNation(st.nation).map(r=>({label:r,count:this.fmt(A.regCount[r]||0),color:this.typeColor(A.regDom[r]),go:()=>this.goRegion(r),_n:A.regCount[r]||0}))
+        .sort((a,b)=>b._n-a._n); }
+    else if(screen==="region"&&D){ hasDrillList=true; drillListLabel="Densest clusters"; drillList=this.topClusters(geo); }
+
+    const tableCols=["Type","Former church","Now","Coordinates"];
+    const sortedVis=[...vis].sort((a,b)=>{ const au=D&&D.types[a[2]].id==="unknown"?1:0,bu=D&&D.types[b[2]].id==="unknown"?1:0; return au-bu; });
+    const tableRowsArr=sortedVis.slice(0,120);
+    const tableRows=tableRowsArr.map(p=>{ const idx=D.pts.indexOf(p); const id=D.types[p[2]].id;
+      return {type:this.typeLabel(id),color:this.typeColor(id),name:p[6]||"Unnamed church",current:p[7]||(id==="unknown"?"—":this.typeLabel(id)),
+        coord:p[1].toFixed(3)+", "+p[0].toFixed(3),open:()=>this.goBuilding(idx)}; });
+    const tableShown=this.fmt(tableRowsArr.length);
+
+    let hover={show:false,left:"0px",top:"0px",color:"var(--gold)",type:"",name:"",sub:""};
+    if(st.hover&&D){ const p=D.pts[st.hover.idx]; const id=D.types[p[2]].id;
+      hover={show:true,left:st.hover.left,top:st.hover.top,color:this.typeColor(id),type:this.typeLabel(id),
+        name:p[6]||"Unnamed church",sub:(p[7]?p[7]+" · ":"")+D.regions[p[3]]}; }
+
+    const awaitingItems=[
+      {title:"Former denomination",desc:"Anglican, Methodist, Baptist… — stripped from the public file."},
+      {title:"Sale & conversion price",desc:"What each building changed hands for."},
+      {title:"Deprivation (IMD)",desc:"Local deprivation decile of each site."},
+      {title:"Year & decade",desc:"When the conversion happened — enables the timeline."},
+    ];
+
+    // building
+    const isBuilding=screen==="building";
+    let building={color:"var(--gold)",tint:"rgba(201,162,58,0.12)",type:"",name:"",lede:"",facts:[]};
+    if(isBuilding&&D&&st.buildingIdx!=null){ const p=D.pts[st.buildingIdx]; const id=D.types[p[2]].id; const col=this.typeColor(id);
+      const nation=D.nations[p[4]]||"";
+      building={ color:col, tint:col+"22", type:this.typeLabel(id),
+        name:p[6]||"Unnamed former church",
+        lede: id==="unknown"?"This building's new purpose has not yet been recorded — one of the silent majority.":`Now serving as ${p[7]||this.typeLabel(id).toLowerCase()}.`,
+        facts:[
+          {label:"Current use",value:p[7]||(id==="unknown"?"Unrecorded":this.typeLabel(id))},
+          {label:"Conversion type",value:this.typeLabel(id)},
+          {label:"Locality",value:p[8]||"—"},
+          {label:"Region",value:D.regions[p[3]]+", "+nation},
+          {label:"Coordinates",value:p[1].toFixed(4)+", "+p[0].toFixed(4)},
+          {label:"Evidence",value:p[5]===1?"High confidence":"Standard"},
+        ] };
+    }
+
+    return {
+      themeAttr, themeIcon, toggleTheme:()=>this.toggleTheme(),
+      confLabel, confDot, toggleConf:()=>this.toggleConf(), goAtlas:()=>this.goAtlas(),
+      crumbs, nationTabs, footStats,
+      isAtlas:screen==="atlas", heroSub, nationPanels, legend, donut,
+      ratioRes, ratioResCount, ratioMosqueCount, ratioMosqueW,
+      shadeTabs, shadeNote, timelineBars,
+      isMapLevel, levelKicker, levelTitle, levelSub, mapHint, backLabel, goBack:()=>this.goBack(),
+      setMapHost:(el)=>this.setMapHost(el), mapCount:this.fmt(vis.length), hover,
+      filterPills, clearFilters:()=>this.clearFilters(), clearOpacity, rankBars, donut2,
+      toggleCompare:()=>this.toggleCompare(), compareOn, compareRows, compareTrackBg, compareTrackBorder, compareKnobLeft, compareKnobBg,
+      hasDrillList, drillListLabel, drillList, tableCols, tableRows, tableShown, awaitingItems,
+      isBuilding, building,
+    };
+  }
+
+  topClusters(geo){
+    // bucket points into ~0.2deg cells, return densest
+    const cells={};
+    for(const p of geo){ const ky=Math.round(p[1]/0.18), kx=Math.round(p[0]/0.28); const k=ky+"_"+kx;
+      if(!cells[k]) cells[k]={n:0,latS:0,lonS:0,types:{}}; const c=cells[k]; c.n++; c.latS+=p[1]; c.lonS+=p[0];
+      const id=this.state.data.types[p[2]].id; c.types[id]=(c.types[id]||0)+1; }
+    const arr=Object.values(cells).map(c=>{ const lat=c.latS/c.n,lon=c.lonS/c.n;
+      let dom="unknown",dv=-1; for(const k in c.types){ if(k==="unknown")continue; if(c.types[k]>dv){dv=c.types[k];dom=k;} }
+      return {n:c.n,lat,lon,dom}; }).sort((a,b)=>b.n-a.n).slice(0,8);
+    return arr.map(c=>({label:c.lat.toFixed(2)+"°N, "+Math.abs(c.lon).toFixed(2)+"°"+(c.lon<0?"W":"E"),count:this.fmt(c.n),color:this.typeColor(c.dom),
+      go:()=>this.goCluster({latMin:c.lat-0.1,latMax:c.lat+0.1,lonMin:c.lon-0.16,lonMax:c.lon+0.16,region:this.state.region,label:c.lat.toFixed(2)+"°N, "+Math.abs(c.lon).toFixed(2)+"°"+(c.lon<0?"W":"E")})}));
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,639 @@
+import { useState } from "react";
+
+const CONVERSION_TYPES = [
+  { id: "community",   label: "Community",   color: "#2D6A2D", ink: "#1a3d1a", count: 361  },
+  { id: "hospitality", label: "Pub / Bar",   color: "#8B2500", ink: "#5c1800", count: 71   },
+  { id: "residential", label: "Residential", color: "#1a4a6b", ink: "#0d2a3d", count: 70   },
+  { id: "commercial",  label: "Commercial",  color: "#4a3a6b", ink: "#2a1f3d", count: 66   },
+  { id: "arts",        label: "Arts",        color: "#6b2a4a", ink: "#3d1528", count: 50   },
+  { id: "other_faith", label: "Other Faith", color: "#7a5200", ink: "#4a3000", count: 43   },
+  { id: "mosque",      label: "Mosque",      color: "#8B1A1A", ink: "#5c0d0d", count: 40   },
+  { id: "education",   label: "Education",   color: "#2a5a1a", ink: "#163010", count: 37   },
+  { id: "unknown",     label: "Unknown",     color: "#5a4a2a", ink: "#3d3010", count: 1758 },
+];
+
+const PINS = [
+  { id:1,  lat:51.51, lon:-0.12,  type:"mosque",      name:"Former St Mary's, Whitechapel",    city:"London"     },
+  { id:2,  lat:53.48, lon:-2.24,  type:"mosque",      name:"Former St Alban's, Manchester",     city:"Manchester" },
+  { id:3,  lat:52.48, lon:-1.90,  type:"mosque",      name:"Former St Peter's, Birmingham",     city:"Birmingham" },
+  { id:4,  lat:51.45, lon:-2.59,  type:"hospitality", name:"The Old Nave (pub), Bristol",       city:"Bristol"    },
+  { id:5,  lat:53.41, lon:-2.99,  type:"hospitality", name:"The Font (pub), Liverpool",         city:"Liverpool"  },
+  { id:6,  lat:53.79, lon:-1.75,  type:"residential", name:"Chapel Mews Apartments, Bradford",  city:"Bradford"   },
+  { id:7,  lat:51.38, lon:-2.36,  type:"residential", name:"The Old Chapel, Bath",              city:"Bath"       },
+  { id:8,  lat:51.51, lon:-0.08,  type:"arts",        name:"Hackney Empire (theatre)",          city:"London"     },
+  { id:9,  lat:55.86, lon:-4.25,  type:"arts",        name:"The Old Kirk Gallery, Glasgow",     city:"Glasgow"    },
+  { id:10, lat:51.88, lon:-2.07,  type:"community",   name:"Gloucester Community Hub",          city:"Gloucester" },
+  { id:11, lat:52.48, lon:-1.91,  type:"other_faith", name:"Former Methodist, now Gurdwara",    city:"Birmingham" },
+  { id:12, lat:53.38, lon:-1.47,  type:"education",   name:"Former Christ Church, now Academy", city:"Sheffield"  },
+  { id:13, lat:54.97, lon:-1.61,  type:"commercial",  name:"Holy Trinity Gym, Newcastle",       city:"Newcastle"  },
+  { id:14, lat:53.80, lon:-1.55,  type:"mosque",      name:"Former St Joseph's, Leeds",         city:"Leeds"      },
+  { id:15, lat:51.52, lon:-0.09,  type:"community",   name:"Former Trinity Chapel, Stepney",    city:"London"     },
+];
+
+const REGIONS = [
+  { id:"scotland",   name:"Scotland",          dominant:"arts",        records:98  },
+  { id:"nw",         name:"North West",         dominant:"mosque",      records:287 },
+  { id:"yorkshire",  name:"Yorkshire",          dominant:"residential", records:198 },
+  { id:"west_mid",   name:"West Midlands",      dominant:"mosque",      records:241 },
+  { id:"london",     name:"London",             dominant:"mosque",      records:312 },
+  { id:"south_east", name:"South East",         dominant:"hospitality", records:201 },
+  { id:"south_west", name:"South West",         dominant:"arts",        records:134 },
+  { id:"wales",      name:"Wales",              dominant:"residential", records:76  },
+];
+
+function typeColor(id) {
+  return CONVERSION_TYPES.find(t => t.id === id)?.color ?? "#5a4a2a";
+}
+
+// ── PARCHMENT TEXTURE SVG FILTER ─────────────────────────────────────────────
+function ParchmentDefs() {
+  return (
+    <defs>
+      <filter id="parchment-texture" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04 0.06" numOctaves="5" seed="8" result="noise"/>
+        <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
+        <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" result="blended"/>
+        <feComposite in="blended" in2="SourceGraphic" operator="in"/>
+      </filter>
+      <filter id="aged-paper" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="4" seed="12" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" result="displaced"/>
+        <feComposite in="displaced" in2="SourceGraphic" operator="in"/>
+      </filter>
+      <filter id="ink-bleed">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.2"/>
+      </filter>
+      <filter id="vignette" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="30" result="blur"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.5" in="blur" result="vignette"/>
+        <feBlend in="SourceGraphic" in2="vignette" mode="multiply"/>
+      </filter>
+      <radialGradient id="parchment-grad" cx="50%" cy="45%" r="65%">
+        <stop offset="0%" stopColor="#F5E6C8"/>
+        <stop offset="60%" stopColor="#E8D4A0"/>
+        <stop offset="100%" stopColor="#C8A060"/>
+      </radialGradient>
+      <radialGradient id="pin-glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="#FFD700" stopOpacity="0.8"/>
+        <stop offset="100%" stopColor="#FF6600" stopOpacity="0"/>
+      </radialGradient>
+      <pattern id="crosshatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#8B6914" strokeWidth="0.3" strokeOpacity="0.3"/>
+      </pattern>
+    </defs>
+  );
+}
+
+// ── COMPASS ROSE ─────────────────────────────────────────────────────────────
+function CompassRose({ x, y, size = 40 }) {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {/* Outer ring */}
+      <circle r={size} fill="none" stroke="#8B6914" strokeWidth="1.5" strokeOpacity="0.6"/>
+      <circle r={size * 0.7} fill="none" stroke="#8B6914" strokeWidth="0.8" strokeOpacity="0.4"/>
+      {/* Cardinal points */}
+      {[0, 90, 180, 270].map(deg => {
+        const r = (deg * Math.PI) / 180;
+        const x1 = Math.sin(r) * size * 0.4;
+        const y1 = -Math.cos(r) * size * 0.4;
+        const x2 = Math.sin(r) * size * 0.95;
+        const y2 = -Math.cos(r) * size * 0.95;
+        return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8B6914" strokeWidth="1.5" strokeOpacity="0.7"/>;
+      })}
+      {/* Intercardinal */}
+      {[45, 135, 225, 315].map(deg => {
+        const r = (deg * Math.PI) / 180;
+        const x1 = Math.sin(r) * size * 0.5;
+        const y1 = -Math.cos(r) * size * 0.5;
+        const x2 = Math.sin(r) * size * 0.85;
+        const y2 = -Math.cos(r) * size * 0.85;
+        return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8B6914" strokeWidth="0.8" strokeOpacity="0.5"/>;
+      })}
+      {/* N pointer */}
+      <polygon points="0,-34 4,-10 0,-18 -4,-10" fill="#8B1A1A" fillOpacity="0.85"/>
+      <polygon points="0,34 4,10 0,18 -4,10" fill="#8B6914" fillOpacity="0.7"/>
+      <circle r="4" fill="#8B6914" stroke="#5c4410" strokeWidth="1"/>
+      {/* N label */}
+      <text y={-size - 5} textAnchor="middle" fontSize="9" fill="#5c3a10" fontFamily="'Palatino Linotype', serif" fontWeight="bold">N</text>
+    </g>
+  );
+}
+
+// ── WAX SEAL ─────────────────────────────────────────────────────────────────
+function WaxSeal({ x, y, label, color = "#8B1A1A" }) {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <circle r="18" fill={color} fillOpacity="0.85" filter="url(#ink-bleed)"/>
+      <circle r="14" fill="none" stroke="#F5E6C8" strokeWidth="0.8" strokeOpacity="0.4"/>
+      <text textAnchor="middle" y="4" fontSize="8" fill="#F5E6C8" fontFamily="'Palatino Linotype', serif"
+        fontWeight="bold" letterSpacing="1">{label}</text>
+    </g>
+  );
+}
+
+// ── TREASURE MAP ILLUSTRATION PINS ──────────────────────────────────────────
+function MapPin({ x, y, type, name, isSelected, onClick }) {
+  const col = typeColor(type);
+
+  const icons = {
+    mosque:      "☽",
+    hospitality: "🍺",
+    residential: "🗝",
+    arts:        "🎭",
+    community:   "✦",
+    other_faith: "✡",
+    education:   "📖",
+    commercial:  "⚔",
+    unknown:     "?",
+  };
+
+  return (
+    <g onClick={onClick} style={{ cursor: "pointer" }}>
+      {isSelected && (
+        <circle cx={x} cy={y - 14} r="20" fill={col} fillOpacity="0.12"
+          stroke={col} strokeWidth="1" strokeOpacity="0.4" strokeDasharray="3 2"/>
+      )}
+      {/* Pin shadow */}
+      <ellipse cx={x + 1} cy={y + 1} rx="8" ry="8" fill="#3a2000" fillOpacity="0.3" filter="url(#ink-bleed)"/>
+      {/* Pin head */}
+      <circle cx={x} cy={y - 14} r="8" fill={col} fillOpacity="0.9" stroke="#2a1500" strokeWidth="1"/>
+      {/* Icon inside pin */}
+      <text x={x} y={y - 11} textAnchor="middle" fontSize="8" style={{ pointerEvents: "none" }}>
+        {icons[type] || "·"}
+      </text>
+      {/* Pin needle */}
+      <line x1={x} y1={y - 6} x2={x} y2={y} stroke="#2a1500" strokeWidth="1.5"/>
+      {/* Tooltip */}
+      {isSelected && (
+        <g transform={`translate(${x > 280 ? x - 130 : x + 12}, ${y - 40})`}>
+          <rect width="120" height="36" rx="3" fill="#2a1500" fillOpacity="0.9" stroke="#8B6914" strokeWidth="1"/>
+          <text x="8" y="14" fontSize="8" fill="#F5E6C8" fontFamily="'Palatino Linotype', serif" fontWeight="bold">
+            {name.length > 20 ? name.slice(0, 20) + "…" : name}
+          </text>
+          <text x="8" y="27" fontSize="7" fill="#C8A060">
+            {type.replace("_", " ")}
+          </text>
+        </g>
+      )}
+    </g>
+  );
+}
+
+// ── UK TREASURE MAP SVG ──────────────────────────────────────────────────────
+function TreasureMap({ pins, activeFilters, selectedPin, onPinClick, selectedRegion, onRegionClick }) {
+  function project(lat, lon) {
+    const x = ((lon - (-8.2)) / (2.2 - (-8.2))) * 340 + 30;
+    const y = ((61.0 - lat) / (61.0 - 49.5)) * 380 + 20;
+    return { x, y };
+  }
+
+  const filteredPins = activeFilters.length === 0 ? pins : pins.filter(p => activeFilters.includes(p.type));
+
+  return (
+    <svg viewBox="0 0 420 440" style={{ width: "100%", height: "100%" }}>
+      <ParchmentDefs/>
+
+      {/* Parchment background */}
+      <rect width="420" height="440" fill="url(#parchment-grad)" filter="url(#parchment-texture)"/>
+
+      {/* Aged spots and stains */}
+      {[[50,30,25],[380,60,18],[20,300,22],[390,380,30],[200,420,35],[10,180,20]].map(([cx,cy,r],i) => (
+        <ellipse key={i} cx={cx} cy={cy} rx={r} ry={r*0.7}
+          fill="#8B6914" fillOpacity="0.08" filter="url(#parchment-texture)"/>
+      ))}
+
+      {/* Decorative border — double rule */}
+      <rect x="8" y="8" width="404" height="424" fill="none" stroke="#8B6914" strokeWidth="2" strokeOpacity="0.5"/>
+      <rect x="12" y="12" width="396" height="416" fill="none" stroke="#8B6914" strokeWidth="0.8" strokeOpacity="0.3"/>
+
+      {/* Corner flourishes */}
+      {[[12,12],[408,12],[12,428],[408,428]].map(([cx,cy],i) => (
+        <g key={i}>
+          <circle cx={cx} cy={cy} r="8" fill="#8B6914" fillOpacity="0.25"/>
+          <circle cx={cx} cy={cy} r="4" fill="#8B6914" fillOpacity="0.4"/>
+        </g>
+      ))}
+
+      {/* Crosshatch sea fill */}
+      <rect width="420" height="440" fill="url(#crosshatch)" fillOpacity="0.4"/>
+
+      {/* UK outline — simplified schematic regions as hand-drawn looking paths */}
+      {/* Scotland */}
+      <path d="M 130 30 Q 160 22 185 38 Q 195 55 188 75 Q 175 88 155 92 Q 135 96 118 82 Q 105 68 108 50 Z"
+        fill="#C8A060" fillOpacity="0.55" stroke="#5c3a10" strokeWidth="1.5"
+        strokeLinejoin="round" filter="url(#aged-paper)"
+        onClick={() => onRegionClick("scotland")}
+        style={{ cursor:"pointer", opacity: selectedRegion === "scotland" ? 1 : 0.85 }}/>
+
+      {/* Northern England */}
+      <path d="M 118 95 Q 155 90 190 95 Q 198 115 192 135 Q 175 142 155 140 Q 135 142 118 135 Q 108 118 118 95 Z"
+        fill="#C8A060" fillOpacity="0.5" stroke="#5c3a10" strokeWidth="1.5" strokeLinejoin="round"
+        filter="url(#aged-paper)"/>
+
+      {/* Midlands */}
+      <path d="M 120 138 Q 155 135 192 138 Q 200 160 195 180 Q 175 188 155 185 Q 132 188 118 178 Q 112 162 120 138 Z"
+        fill="#C8A060" fillOpacity="0.5" stroke="#5c3a10" strokeWidth="1.5" strokeLinejoin="round"
+        filter="url(#aged-paper)"/>
+
+      {/* Wales */}
+      <path d="M 95 155 Q 118 148 118 178 Q 112 200 100 215 Q 82 220 72 205 Q 65 188 72 170 Z"
+        fill="#C8A060" fillOpacity="0.5" stroke="#5c3a10" strokeWidth="1.5" strokeLinejoin="round"
+        filter="url(#aged-paper)" onClick={() => onRegionClick("wales")} style={{ cursor:"pointer" }}/>
+
+      {/* South England */}
+      <path d="M 115 182 Q 155 178 200 185 Q 215 205 210 230 Q 195 248 170 252 Q 148 255 128 248 Q 108 238 105 215 Q 105 198 115 182 Z"
+        fill="#C8A060" fillOpacity="0.5" stroke="#5c3a10" strokeWidth="1.5" strokeLinejoin="round"
+        filter="url(#aged-paper)"/>
+
+      {/* Northern Ireland */}
+      <path d="M 72 88 Q 95 82 100 98 Q 98 110 82 112 Q 68 108 68 95 Z"
+        fill="#C8A060" fillOpacity="0.45" stroke="#5c3a10" strokeWidth="1.2" strokeLinejoin="round"
+        filter="url(#aged-paper)"/>
+
+      {/* Sea labels in italic */}
+      <text x="42" y="200" fontSize="9" fill="#5c3a10" fillOpacity="0.5"
+        fontFamily="'Palatino Linotype', serif" fontStyle="italic" transform="rotate(-90,42,200)">
+        IRISH SEA
+      </text>
+      <text x="248" y="120" fontSize="9" fill="#5c3a10" fillOpacity="0.5"
+        fontFamily="'Palatino Linotype', serif" fontStyle="italic">
+        NORTH SEA
+      </text>
+      <text x="155" y="278" fontSize="9" fill="#5c3a10" fillOpacity="0.5"
+        fontFamily="'Palatino Linotype', serif" fontStyle="italic">
+        ENGLISH CHANNEL
+      </text>
+
+      {/* Region text labels, hand-lettered feel */}
+      {[
+        ["SCOTLAND",     148, 62 ],
+        ["N. ENGLAND",   155, 118],
+        ["MIDLANDS",     158, 162],
+        ["WALES",        88,  188],
+        ["SOUTH",        160, 218],
+      ].map(([label, x, y]) => (
+        <text key={label} x={x} y={y} textAnchor="middle" fontSize="7.5"
+          fill="#3a1f00" fillOpacity="0.6" fontFamily="'Palatino Linotype', serif"
+          fontWeight="bold" letterSpacing="2" filter="url(#ink-bleed)">
+          {label}
+        </text>
+      ))}
+
+      {/* Wax seals for major cities */}
+      <WaxSeal x={170} y={228} label="LON" color="#8B1A1A"/>
+      <WaxSeal x={152} y={118} label="MAN" color="#1a3d6b"/>
+      <WaxSeal x={148} y={130} label="BHM" color="#4a2a00"/>
+
+      {/* Pins */}
+      {filteredPins.map(pin => {
+        const { x, y } = project(pin.lat, pin.lon);
+        return (
+          <MapPin key={pin.id} x={x} y={y} type={pin.type} name={pin.name}
+            isSelected={selectedPin?.id === pin.id}
+            onClick={() => onPinClick(pin)}/>
+        );
+      })}
+
+      {/* Compass rose — bottom left */}
+      <CompassRose x={55} y={385} size={32}/>
+
+      {/* Scale bar */}
+      <g transform="translate(270, 378)">
+        <line x1="0" y1="0" x2="80" y2="0" stroke="#5c3a10" strokeWidth="1.5"/>
+        <line x1="0" y1="-4" x2="0" y2="4" stroke="#5c3a10" strokeWidth="1.5"/>
+        <line x1="40" y1="-3" x2="40" y2="3" stroke="#5c3a10" strokeWidth="1"/>
+        <line x1="80" y1="-4" x2="80" y2="4" stroke="#5c3a10" strokeWidth="1.5"/>
+        <text x="0" y="14" fontSize="7" fill="#5c3a10" fontFamily="'Palatino Linotype', serif">0</text>
+        <text x="30" y="14" fontSize="7" fill="#5c3a10" fontFamily="'Palatino Linotype', serif">150mi</text>
+        <text x="65" y="14" fontSize="7" fill="#5c3a10" fontFamily="'Palatino Linotype', serif">300mi</text>
+      </g>
+
+      {/* Title cartouche */}
+      <g transform="translate(240, 30)">
+        <rect x="-55" y="-14" width="140" height="36" rx="2" fill="#C8A060" fillOpacity="0.7"
+          stroke="#8B6914" strokeWidth="1.5"/>
+        <rect x="-52" y="-11" width="134" height="30" rx="1" fill="none"
+          stroke="#8B6914" strokeWidth="0.5" strokeDasharray="3 2"/>
+        <text x="15" y="4" textAnchor="middle" fontSize="8" fill="#3a1f00"
+          fontFamily="'Palatino Linotype', serif" fontWeight="bold" letterSpacing="1.5">
+          SACRED PLACES
+        </text>
+        <text x="15" y="16" textAnchor="middle" fontSize="6" fill="#5c3a10"
+          fontFamily="'Palatino Linotype', serif" letterSpacing="1">
+          of the British Isles
+        </text>
+      </g>
+
+      {/* Torn edge effect bottom */}
+      <path d="M 0 435 Q 40 428 80 436 Q 120 442 160 434 Q 200 428 240 436 Q 280 442 320 433 Q 360 427 420 435 L 420 440 L 0 440 Z"
+        fill="#C8A060" fillOpacity="0.4"/>
+    </svg>
+  );
+}
+
+// ── SCROLL / LEGEND PANEL ─────────────────────────────────────────────────────
+function ScrollPanel({ children, title }) {
+  return (
+    <div style={{
+      background: "linear-gradient(160deg, #2a1800 0%, #1a0f00 100%)",
+      border: "2px solid #8B6914",
+      borderRadius: 4,
+      padding: "14px 16px",
+      position: "relative",
+    }}>
+      {/* Corner flourishes */}
+      {["0,0","calc(100% - 0px),0","0,calc(100% - 0px)","calc(100% - 0px),calc(100% - 0px)"].map((pos, i) => (
+        <div key={i} style={{
+          position: "absolute",
+          top: i < 2 ? 4 : "auto", bottom: i >= 2 ? 4 : "auto",
+          left: i % 2 === 0 ? 4 : "auto", right: i % 2 === 1 ? 4 : "auto",
+          width: 10, height: 10,
+          borderTop: i < 2 ? "1.5px solid #8B6914" : "none",
+          borderBottom: i >= 2 ? "1.5px solid #8B6914" : "none",
+          borderLeft: i % 2 === 0 ? "1.5px solid #8B6914" : "none",
+          borderRight: i % 2 === 1 ? "1.5px solid #8B6914" : "none",
+        }}/>
+      ))}
+      {title && (
+        <p style={{ margin: "0 0 10px", fontSize: 9, letterSpacing: "0.2em", color: "#C8A060",
+          fontFamily: "'Palatino Linotype', serif", textAlign: "center", textTransform: "uppercase" }}>
+          ✦ {title} ✦
+        </p>
+      )}
+      {children}
+    </div>
+  );
+}
+
+// ── MAIN ─────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [selectedPin,   setSelectedPin]   = useState(null);
+  const [selectedRegion,setSelectedRegion]= useState(null);
+
+  function toggleFilter(id) {
+    setActiveFilters(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  const visibleTypes = activeFilters.length === 0 ? CONVERSION_TYPES : CONVERSION_TYPES.filter(t => activeFilters.includes(t.id));
+  const filteredTotal = visibleTypes.reduce((s,t) => s + t.count, 0);
+  const regionData = selectedRegion ? REGIONS.find(r => r.id === selectedRegion) : null;
+
+  const BG   = "linear-gradient(135deg, #1a0f00 0%, #0f0800 50%, #1a0f00 100%)";
+  const FONT = "'Palatino Linotype', 'Book Antiqua', Palatino, serif";
+
+  return (
+    <div style={{ minHeight:"100vh", background: BG, color:"#E8D4A0", fontFamily: FONT }}>
+      <style>{`
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a0f00; }
+        ::-webkit-scrollbar-thumb { background: #8B6914; border-radius: 2px; }
+        @keyframes flicker {
+          0%,100% { opacity:1; } 50% { opacity:0.85; }
+        }
+        .candle { animation: flicker 3s ease-in-out infinite; }
+      `}</style>
+
+      {/* ── HEADER ── */}
+      <header style={{
+        padding: "14px 24px",
+        borderBottom: "2px solid #8B6914",
+        background: "linear-gradient(90deg, #1a0800 0%, #2a1500 50%, #1a0800 100%)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          <svg width="36" height="36" viewBox="0 0 36 36">
+            <rect width="36" height="36" rx="4" fill="#2a1500" stroke="#8B6914" strokeWidth="1.5"/>
+            {/* Fleur-de-lis style cross */}
+            <line x1="18" y1="6" x2="18" y2="30" stroke="#C8A060" strokeWidth="2"/>
+            <line x1="8" y1="14" x2="28" y2="14" stroke="#C8A060" strokeWidth="2"/>
+            <circle cx="18" cy="14" r="3" fill="#8B1A1A"/>
+          </svg>
+          <div>
+            <h1 style={{ margin:0, fontSize:18, fontWeight:"bold", letterSpacing:"0.15em", color:"#C8A060" }}>
+              SACRED SPACES
+            </h1>
+            <p style={{ margin:0, fontSize:9, color:"#8B6914", letterSpacing:"0.2em" }}>
+              A CARTOGRAPHIC RECORD OF CHURCHES IN THE REALM OF BRITANNIA
+            </p>
+          </div>
+        </div>
+        {/* Candle flames */}
+        <div style={{ display:"flex", gap:16, alignItems:"center" }}>
+          {[0,1].map(i => (
+            <svg key={i} width="20" height="32" viewBox="0 0 20 32" className="candle">
+              <ellipse cx="10" cy="8" rx="5" ry="7" fill="#FFD700" fillOpacity="0.9"
+                filter="url(#pin-glow)"/>
+              <ellipse cx="10" cy="11" rx="3" ry="4" fill="#FF6600"/>
+              <rect x="8" y="14" width="4" height="14" rx="1" fill="#F5E6C8"/>
+              <ellipse cx="10" cy="28" rx="4" ry="2" fill="#D4B880"/>
+            </svg>
+          ))}
+          <div style={{ textAlign:"right" }}>
+            <p style={{ margin:0, fontSize:10, color:"#C8A060", letterSpacing:"0.1em" }}>ANNO DOMINI MMXXVI</p>
+            <p style={{ margin:0, fontSize:9, color:"#8B6914" }}>2,496 SITES CATALOGUED</p>
+          </div>
+        </div>
+      </header>
+
+      {/* ── FILTER SCROLLS ── */}
+      <div style={{
+        padding: "10px 20px",
+        borderBottom: "1px solid #5c3a10",
+        background: "#140a00",
+        display: "flex", gap:6, flexWrap:"wrap", alignItems:"center",
+      }}>
+        <span style={{ fontSize:9, color:"#8B6914", letterSpacing:"0.15em", marginRight:6 }}>✦ LEGEND ✦</span>
+        {CONVERSION_TYPES.filter(t => t.id !== "unknown").map(t => {
+          const active = activeFilters.includes(t.id);
+          return (
+            <button key={t.id} onClick={() => toggleFilter(t.id)} style={{
+              background: active ? `${t.color}33` : "#1a0f00",
+              border: `1px solid ${active ? t.color : "#5c3a10"}`,
+              borderRadius: 2,
+              color: active ? "#E8D4A0" : "#8B6914",
+              fontSize: 10, padding: "4px 10px", cursor: "pointer",
+              fontFamily: FONT, letterSpacing: "0.08em",
+              boxShadow: active ? `0 0 6px ${t.color}44, inset 0 0 4px ${t.color}22` : "none",
+              transition: "all 0.2s",
+            }}>
+              {t.label}
+            </button>
+          );
+        })}
+        {activeFilters.length > 0 && (
+          <button onClick={() => setActiveFilters([])} style={{
+            background:"none", border:"1px solid #5c3a10", borderRadius:2,
+            color:"#8B6914", fontSize:10, padding:"4px 10px", cursor:"pointer", fontFamily:FONT,
+          }}>
+            Clear All
+          </button>
+        )}
+      </div>
+
+      {/* ── MAIN LAYOUT ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"220px 1fr 220px", gap:0, height:"calc(100vh - 130px)" }}>
+
+        {/* ── LEFT PANEL ── */}
+        <aside style={{
+          padding: "14px",
+          borderRight: "1px solid #5c3a10",
+          overflowY: "auto",
+          display: "flex", flexDirection: "column", gap: 12,
+          background: "linear-gradient(180deg, #140a00 0%, #0f0800 100%)",
+        }}>
+          <ScrollPanel title="The Count">
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {[
+                { label:"Churches Catalogued", value:"48,151", col:"#C8A060" },
+                { label:"Confirmed Conversions", value:"2,496", col:"#E8D4A0" },
+                { label:"Become Mosques",  value:"40",  col:"#8B1A1A" },
+                { label:"Become Taverns",  value:"71",  col:"#8B3500" },
+                { label:"Become Dwellings",value:"70",  col:"#1a3d6b" },
+                { label:"Become Halls",    value:"361", col:"#2D6A2D"  },
+              ].map(s => (
+                <div key={s.label} style={{ borderBottom:"1px solid #3a2000", paddingBottom:8 }}>
+                  <p style={{ margin:0, fontSize:9, color:"#8B6914", letterSpacing:"0.1em" }}>{s.label}</p>
+                  <p style={{ margin:"3px 0 0", fontSize:20, color:s.col, fontWeight:"bold" }}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+          </ScrollPanel>
+
+          <ScrollPanel title="Finding">
+            <p style={{ margin:0, fontSize:11, color:"#C8A060", lineHeight:1.8 }}>
+              <em>"Taverns outnumber mosques <strong>1.8×</strong> as heirs to the sacred nave."</em>
+            </p>
+          </ScrollPanel>
+
+          <ScrollPanel title="Data Sources">
+            {["Wikidata", "OpenStreetMap", "Historic England", "Charity Commission"].map(s => (
+              <p key={s} style={{ margin:"4px 0", fontSize:10, color:"#8B6914", display:"flex", gap:6, alignItems:"center" }}>
+                <span style={{ color:"#C8A060" }}>✦</span> {s}
+              </p>
+            ))}
+          </ScrollPanel>
+        </aside>
+
+        {/* ── MAP ── */}
+        <div style={{ position:"relative", overflow:"hidden", background:"#0a0500" }}>
+          <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
+            <defs>
+              <filter id="pin-glow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+          </svg>
+          <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", padding:8 }}>
+            <div style={{ width:"100%", maxWidth:480, aspectRatio:"420/440" }}>
+              <TreasureMap
+                pins={PINS}
+                activeFilters={activeFilters}
+                selectedPin={selectedPin}
+                onPinClick={p => setSelectedPin(prev => prev?.id === p.id ? null : p)}
+                selectedRegion={selectedRegion}
+                onRegionClick={id => setSelectedRegion(prev => prev === id ? null : id)}
+              />
+            </div>
+          </div>
+
+          {/* Selected pin card — floats over map */}
+          {selectedPin && (
+            <div style={{
+              position:"absolute", bottom:16, left:"50%", transform:"translateX(-50%)",
+              background:"linear-gradient(135deg, #2a1500 0%, #1a0f00 100%)",
+              border:"1px solid #8B6914",
+              borderRadius:4, padding:"12px 16px", minWidth:260,
+              display:"flex", gap:12, alignItems:"center",
+              boxShadow:"0 4px 24px #00000088",
+            }}>
+              <div style={{ width:3, height:36, background: typeColor(selectedPin.type), borderRadius:2 }}/>
+              <div>
+                <p style={{ margin:0, fontSize:12, color:"#E8D4A0", fontWeight:"bold" }}>{selectedPin.name}</p>
+                <p style={{ margin:"3px 0 0", fontSize:10, color:"#C8A060", letterSpacing:"0.08em" }}>
+                  {selectedPin.type.replace("_"," ").toUpperCase()} · {selectedPin.city}
+                </p>
+              </div>
+              <button onClick={() => setSelectedPin(null)} style={{
+                marginLeft:"auto", background:"none", border:"none", color:"#8B6914",
+                cursor:"pointer", fontSize:14, fontFamily:FONT,
+              }}>✕</button>
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT PANEL ── */}
+        <aside style={{
+          padding:"14px",
+          borderLeft:"1px solid #5c3a10",
+          overflowY:"auto",
+          display:"flex", flexDirection:"column", gap:12,
+          background:"linear-gradient(180deg, #140a00 0%, #0f0800 100%)",
+        }}>
+          <ScrollPanel title="By Region">
+            {REGIONS.map(r => {
+              const col = typeColor(r.dominant);
+              const isSelected = selectedRegion === r.id;
+              return (
+                <button key={r.id} onClick={() => setSelectedRegion(prev => prev === r.id ? null : r.id)}
+                  style={{
+                    width:"100%", textAlign:"left", background: isSelected ? `${col}22` : "none",
+                    border: isSelected ? `1px solid ${col}` : "1px solid transparent",
+                    borderRadius:2, padding:"7px 8px", cursor:"pointer", marginBottom:4,
+                    display:"flex", justifyContent:"space-between", alignItems:"center",
+                    transition:"all 0.2s",
+                  }}
+                >
+                  <span style={{ fontSize:10, color: isSelected ? "#E8D4A0" : "#C8A060", fontFamily:FONT }}>
+                    {r.name}
+                  </span>
+                  <span style={{ fontSize:10, color:col }}>{r.records}</span>
+                </button>
+              );
+            })}
+          </ScrollPanel>
+
+          <ScrollPanel title="Bestiary">
+            <p style={{ margin:"0 0 8px", fontSize:9, color:"#8B6914", letterSpacing:"0.1em" }}>CONVERSION MARKS</p>
+            {[
+              { type:"mosque",      sym:"☽", desc:"House of the Crescent" },
+              { type:"hospitality", sym:"🍺", desc:"Tavern & Alehouse"     },
+              { type:"residential", sym:"🗝", desc:"Private Dwelling"       },
+              { type:"arts",        sym:"🎭", desc:"Theatre & Playhouse"    },
+              { type:"community",   sym:"✦", desc:"Hall of the People"      },
+              { type:"other_faith", sym:"✡", desc:"Other Creed"             },
+              { type:"education",   sym:"📖", desc:"School & Library"        },
+              { type:"commercial",  sym:"⚔", desc:"Commerce & Trade"        },
+            ].map(e => (
+              <div key={e.type} style={{ display:"flex", gap:8, alignItems:"center", marginBottom:7 }}>
+                <span style={{ fontSize:14, width:18, textAlign:"center" }}>{e.sym}</span>
+                <div>
+                  <p style={{ margin:0, fontSize:10, color:"#C8A060" }}>{e.desc}</p>
+                  <div style={{ width:40, height:2, background:typeColor(e.type), borderRadius:1, marginTop:2 }}/>
+                </div>
+              </div>
+            ))}
+          </ScrollPanel>
+        </aside>
+      </div>
+
+      {/* ── FOOTER ── */}
+      <div style={{
+        borderTop:"1px solid #5c3a10",
+        background:"#0a0500",
+        padding:"8px 24px",
+        display:"flex", gap:24, alignItems:"center",
+        fontSize:10, color:"#5c3a10", letterSpacing:"0.12em",
+      }}>
+        <span>✦ SACRED SPACES · UK CHURCH CONVERSION RECORD · MMXXVI ✦</span>
+        <span style={{ marginLeft:"auto" }}>
+          {activeFilters.length > 0 ? `${activeFilters.join(", ").toUpperCase()} ACTIVE` : "ALL RECORDS"}
+          {" · "}{selectedRegion ? selectedRegion.toUpperCase() : "ALL REGIONS"}
+        </span>
+      </div>
+    </div>
+  );
+}

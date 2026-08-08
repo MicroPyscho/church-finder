@@ -253,7 +253,7 @@ async def stream_analysis(property_id: str, db: AsyncSession = Depends(get_db)):
         try:
             result = await chat(
                 messages=[
-                    {"role": "system", "content": "You are a UK property analyst. Write a concise 200-word analysis of this church property for a potential buyer. Be factual and helpful."},
+                    {"role": "system", "content": "You are a UK property analyst. Write a concise 200-word analysis of this church property for a potential buyer. Be factual and helpful. Write in plain prose only. Do not use markdown, headers, bold text, bullet points, or any formatting. Do not include a title or heading. Just write plain flowing paragraphs."},
                     {"role": "user", "content": f"Property: {prop.title}\nLocation: {prop.location}\nPrice: {prop.price}\nDescription: {(prop.description or '')[:500]}"},
                 ],
                 temperature=0.5, max_tokens=300,
@@ -343,7 +343,26 @@ def _score(criteria: list, listing: Listing) -> int:
 def _to_dict(listing: Listing, score: int, criteria: list) -> dict:
     images = []
     try:
-        images = json.loads(listing.images) if listing.images else []
+        raw = json.loads(listing.images) if listing.images else []
+        # Filter to only valid property image URLs
+        # Exclude social media, generic stock, map tiles, icons
+        BAD = [
+            "facebook.com", "twitter.com", "instagram.com",
+            "google.com/maps", "maps.googleapis", "gstatic.com",
+            "gravatar.com", "avatar", "logo", "icon", "badge",
+            "placeholder", "blank", "default", "animal", "dog",
+            "cat", "bird", "butterfly", "nature", "stock",
+            "unsplash.com", "pexels.com", "shutterstock.com",
+            "gettyimages.com", "istockphoto.com",
+            "data:image",  # base64 embedded
+        ]
+        images = [
+            url for url in raw
+            if isinstance(url, str)
+            and url.startswith("http")
+            and not any(b in url.lower() for b in BAD)
+            and len(url) > 20
+        ]
     except Exception:
         pass
     return {

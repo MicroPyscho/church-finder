@@ -1,79 +1,113 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Trash2, Plus, Check } from "lucide-react";
-import { alertsApi } from "../api/client";
+import { useAuthStore } from "../stores/authStore";
+
+interface Alert {
+  id: number;
+  name: string;
+  meta: string;
+}
 
 export default function AlertsPage() {
-  const qc = useQueryClient();
-  const [form, setForm] = useState({name:"My Alert",query:"",max_price:"",counties:"",min_ai_score:"0"});
-  const [saved,setSaved]= useState(false);
+  const { user } = useAuthStore();
+  const [alerts, setAlerts] = useState<Alert[]>([
+    { id: 1, name: "Yorkshire chapels under £200k", meta: "Keywords: methodist chapel hall · Max £200,000 · Counties: West & South Yorkshire" },
+    { id: 2, name: "Listed churches to convert", meta: "Keywords: grade listed conversion · Min match 75% · Counties: All UK" },
+  ]);
+  const [form, setForm] = useState({ name: "", query: "", max_price: "", counties: "", min_ai_score: "" });
+  const [justSaved, setJustSaved] = useState(false);
+  const [nextId, setNextId] = useState(3);
 
-  const { data:alerts } = useQuery({ queryKey:["alerts"], queryFn:alertsApi.list });
+  function setField(k: string, v: string) { setForm(f => ({ ...f, [k]: v })); }
 
-  const createMut = useMutation({
-    mutationFn: (d:any)=>alertsApi.create(d),
-    onSuccess: () => { qc.invalidateQueries({queryKey:["alerts"]}); setSaved(true); setTimeout(()=>setSaved(false),3000); },
-  });
+  function createAlert() {
+    const name = form.name.trim() || form.query.trim() || "New alert";
+    const bits: string[] = [];
+    if (form.query.trim()) bits.push("Keywords: " + form.query.trim());
+    if (form.max_price.trim()) { const n = Number(form.max_price.replace(/[^0-9]/g, "")); if (n) bits.push("Max £" + n.toLocaleString()); }
+    if (form.counties.trim()) bits.push("Counties: " + form.counties.trim());
+    if (form.min_ai_score.trim()) bits.push("Min match " + form.min_ai_score + "%");
+    const meta = bits.length ? bits.join(" · ") : "All churches, chapels & places of worship";
+    setAlerts(a => [{ id: nextId, name, meta }, ...a]);
+    setNextId(n => n + 1);
+    setForm({ name: "", query: "", max_price: "", counties: "", min_ai_score: "" });
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 2400);
+  }
 
-  const deleteMut = useMutation({
-    mutationFn: alertsApi.delete,
-    onSuccess: () => qc.invalidateQueries({queryKey:["alerts"]}),
-  });
+  function removeAlert(id: number) { setAlerts(a => a.filter(x => x.id !== id)); }
+
+  const fields = [
+    { k: "name", label: "Alert name", placeholder: "e.g. Churches under £200k, Kent", span: "1 / -1" },
+    { k: "query", label: "Search keywords", placeholder: "e.g. former methodist chapel", span: "1 / -1" },
+    { k: "max_price", label: "Max price (£)", placeholder: "e.g. 250,000", span: "auto" },
+    { k: "min_ai_score", label: "Min match score (%)", placeholder: "e.g. 80", span: "auto" },
+    { k: "counties", label: "Counties (comma-separated)", placeholder: "e.g. Kent, Surrey, Essex", span: "1 / -1" },
+  ];
 
   return (
-    <div className="wrap" style={{paddingTop:40,paddingBottom:80,maxWidth:720}}>
-      <h1 style={{fontFamily:"var(--font-display)",fontSize:"2rem",fontWeight:900,letterSpacing:"-.03em",marginBottom:6}}>Alerts</h1>
-      <p style={{fontSize:"0.88rem",color:"var(--mid)",marginBottom:36}}>Get notified the moment a matching property appears</p>
+    <main style={{ maxWidth: 720, margin: "0 auto", padding: "72px 22px 90px", animation: "riseIn .6s cubic-bezier(.16,1,.3,1) both" }}>
+      <p style={{ font: "500 12px 'Space Grotesk'", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink3)", margin: "0 0 16px" }}>Stay ahead of the market</p>
+      <h1 style={{ fontFamily: "'Gabarito'", fontWeight: 900, fontSize: "clamp(36px,5.2vw,54px)", lineHeight: 1.0, letterSpacing: "-0.04em", color: "var(--ink)", margin: 0 }}>Alerts</h1>
+      <p style={{ font: "300 19px/1.5 'Space Grotesk'", color: "var(--ink2)", margin: "18px 0 0", maxWidth: 520 }}>We'll notify you the moment a property matching your criteria appears across any of our sources.</p>
 
-      <div style={{border:"1px solid var(--rule)",borderRadius:"var(--r2)",padding:24,marginBottom:32,background:"var(--off-white)"}}>
-        <h2 style={{fontFamily:"var(--font-display)",fontSize:"1rem",fontWeight:700,marginBottom:18,display:"flex",alignItems:"center",gap:6}}>
-          <Plus size={14}/> New alert
-        </h2>
-        {[
-          {k:"name",        l:"Alert name",               p:"e.g. Churches under £200k, Kent"},
-          {k:"query",       l:"Search keywords",          p:"e.g. former methodist chapel"},
-          {k:"max_price",   l:"Max price (£)",            p:"e.g. 250000"},
-          {k:"counties",    l:"Counties (comma-separated)",p:"e.g. Kent, Surrey, Essex"},
-          {k:"min_ai_score",l:"Min AI score (0–10)",      p:"e.g. 6"},
-        ].map(f=>(
-          <div key={f.k} className="form-row">
-            <label className="form-label">{f.l}</label>
-            <input className="form-input" placeholder={f.p} value={(form as any)[f.k]} onChange={e=>setForm(x=>({...x,[f.k]:e.target.value}))}/>
-          </div>
-        ))}
+      {/* New alert form */}
+      <div style={{ marginTop: 40, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 24, padding: "30px 30px 28px", boxShadow: "0 14px 50px rgba(0,0,0,0.05)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 22 }}>
+          <span style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)", fontSize: 17 }}>+</span>
+          <h2 style={{ fontFamily: "'Gabarito'", fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em", color: "var(--ink)", margin: 0 }}>New alert</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {fields.map(f => (
+            <label key={f.k} style={{ display: "flex", flexDirection: "column", gap: 7, gridColumn: f.span }}>
+              <span style={{ font: "500 12px 'Space Grotesk'", letterSpacing: "0.02em", color: "var(--ink2)" }}>{f.label}</span>
+              <input
+                value={(form as any)[f.k]}
+                onChange={e => setField(f.k, e.target.value)}
+                placeholder={f.placeholder}
+                style={{ border: "1px solid var(--border)", borderRadius: 13, background: "var(--surface2)", padding: "12px 14px", font: "400 15px 'Space Grotesk'", color: "var(--ink)", outline: "none", width: "100%" }}
+              />
+            </label>
+          ))}
+        </div>
         <button
-          className="btn btn-black"
-          style={{marginTop:8}}
-          onClick={()=>createMut.mutate({...form,max_price:form.max_price?+form.max_price:null,min_ai_score:+form.min_ai_score})}
-          disabled={createMut.isPending}
+          onClick={createAlert}
+          style={{ marginTop: 22, display: "inline-flex", alignItems: "center", gap: 8, background: "var(--btnbg)", color: "var(--btnfg)", border: "none", borderRadius: 980, padding: "13px 26px", font: "500 15px 'Space Grotesk'", cursor: "pointer" }}
         >
-          {saved?<><Check size={13}/> Alert created</>:<><Bell size={13}/> Create alert</>}
+          {justSaved ? "✓ Alert created" : "Create alert"}
         </button>
       </div>
 
-      <h2 style={{fontFamily:"var(--font-display)",fontSize:"0.9rem",fontWeight:700,marginBottom:12}}>
-        Active alerts ({alerts?.length??0})
-      </h2>
+      {/* Active alerts */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "46px 0 18px" }}>
+        <h2 style={{ fontFamily: "'Gabarito'", fontWeight: 700, fontSize: 17, color: "var(--ink)", margin: 0 }}>Active alerts</h2>
+        <span style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink4)" }}>{alerts.length}</span>
+        <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+      </div>
 
-      {!alerts?.length&&(
-        <div className="empty"><div className="empty__icon"><Bell size={28} strokeWidth={1}/></div><div className="empty__title">No alerts yet</div></div>
+      {alerts.length === 0 && (
+        <div style={{ textAlign: "center", padding: "48px 0", color: "var(--ink3)" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 22 }}>◔</div>
+          <p style={{ font: "400 15px 'Space Grotesk'", margin: 0 }}>No alerts yet — create one above.</p>
+        </div>
       )}
 
-      {alerts?.map((a:any)=>(
-        <div key={a.id} className="alert-card active">
-          <div>
-            <div className="alert-name">{a.name}</div>
-            <div className="alert-meta">
-              {a.query&&<span>Keywords: {a.query} · </span>}
-              {a.max_price&&<span>Max £{a.max_price.toLocaleString()} · </span>}
-              {a.counties&&<span>Counties: {a.counties}</span>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {alerts.map(a => (
+          <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18, padding: "18px 22px" }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#1a7a3c", display: "inline-block", boxShadow: "0 0 0 3px rgba(26,122,60,0.15)" }} />
+                <span style={{ fontFamily: "'Gabarito'", fontWeight: 700, fontSize: 16, color: "var(--ink)" }}>{a.name}</span>
+              </div>
+              <p style={{ font: "400 13px/1.5 'Space Grotesk'", color: "var(--ink2)", margin: 0 }}>{a.meta}</p>
             </div>
+            <button
+              onClick={() => removeAlert(a.id)}
+              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 980, padding: "8px 15px", font: "500 12px 'Space Grotesk'", color: "var(--ink2)", cursor: "pointer" }}
+            >Remove</button>
           </div>
-          <button className="btn-sm" onClick={()=>deleteMut.mutate(a.id)} style={{flexShrink:0}}>
-            <Trash2 size={12}/> Remove
-          </button>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </main>
   );
 }

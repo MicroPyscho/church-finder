@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600&family=League+Script&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  ::selection{background:rgba(0,113,227,0.15);}
+  input::placeholder{color:var(--ink3);}
+  select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231d1d1f' stroke-width='2.4'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:34px !important;}
+  @keyframes riseIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  @keyframes naveHaloGlow{0%{filter:blur(6px) hue-rotate(0deg);}100%{filter:blur(6px) hue-rotate(360deg);}}
+  @keyframes naveHaloRing{0%{filter:hue-rotate(0deg);}100%{filter:hue-rotate(360deg);}}
+  :root,[data-nave-theme="light"]{
+    --bg:#fbfbfd;--surface:#ffffff;--surface2:#f5f5f7;
+    --ink:#1d1d1f;--ink2:#6e6e73;--ink3:#86868b;--ink4:#aeaeb2;--ink5:#3a3a3c;
+    --border:#d2d2d7;--border2:#e2e2e6;
+    --line:rgba(0,0,0,0.07);--line2:rgba(0,0,0,0.06);--line3:rgba(0,0,0,0.05);
+    --btnbg:#1d1d1f;--btnfg:#ffffff;--btnbg-h:#000000;
+    --navbg:rgba(251,251,253,0.82);
+    --glass:rgba(255,255,255,0.72);--glass2:rgba(255,255,255,0.82);
+  }
+  [data-nave-theme="dark"]{
+    --bg:#000000;--surface:#1c1c1e;--surface2:#2c2c2e;
+    --ink:#f5f5f7;--ink2:#a1a1a6;--ink3:#86868b;--ink4:#6e6e73;--ink5:#d4d4d6;
+    --border:#3a3a3c;--border2:#3a3a3c;
+    --line:rgba(255,255,255,0.10);--line2:rgba(255,255,255,0.08);--line3:rgba(255,255,255,0.06);
+    --btnbg:#f5f5f7;--btnfg:#1d1d1f;--btnbg-h:#ffffff;
+    --navbg:rgba(20,20,22,0.80);
+    --glass:rgba(40,40,42,0.72);--glass2:rgba(40,40,42,0.86);
+  }
+  [data-nave-theme="dark"] select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f5f5f7' stroke-width='2.4'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");}
+  [data-nave-theme="dark"] header img,[data-nave-theme="dark"] footer img{filter:invert(1) brightness(1.9);}
+</style>
+</helmet>
+
+<div data-nave-theme="{{ theme }}" style="font-family:'Space Grotesk',system-ui,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh;transition:background .4s ease,color .4s ease;">
+
+  <!-- ───────── NAV ───────── -->
+  <header style="position:sticky;top:0;z-index:200;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:var(--navbg);border-bottom:1px solid var(--line);">
+    <div style="max-width:1040px;margin:0 auto;padding:0 22px;height:52px;display:flex;align-items:center;justify-content:space-between;">
+      <button onClick="{{ goSearch }}" title="Nave — home" style="display:flex;align-items:center;background:none;border:none;cursor:pointer;padding:0;">
+        <img src="assets/nave_black.svg" alt="Nave" style="height:21px;width:auto;display:block;" />
+      </button>
+      <nav style="display:flex;gap:32px;align-items:center;">
+        <button onClick="{{ goSearch }}" style="background:none;border:none;cursor:pointer;padding:0;font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.9;">Search</button>
+        <span style="font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;cursor:default;">Regions</span>
+        <span style="font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;cursor:default;">Alerts</span>
+        <span style="font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;cursor:default;">Pre-market</span>
+      </nav>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button onClick="{{ toggleTheme }}" title="Toggle appearance" style="width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);padding:0;font-size:13px;line-height:1;" style-hover="background:var(--surface2);">{{ themeIcon }}</button>
+        <span style="display:flex;align-items:center;gap:6px;font:400 13px 'Space Grotesk';color:var(--ink);opacity:0.62;cursor:default;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09C12.09 3.81 13.76 3 15.5 3 18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.18L12 20.5z"/></svg>
+          {{ savedCount }}
+        </span>
+        <span style="width:30px;height:30px;border-radius:50%;background:var(--btnbg);color:var(--btnfg);display:flex;align-items:center;justify-content:center;font-family:'Gabarito';font-weight:700;font-size:13px;cursor:default;">N</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ───────── SEARCH SCREEN ───────── -->
+  <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ true }}">
+  <main style="animation:riseIn .6s cubic-bezier(.16,1,.3,1) both;">
+
+    <section style="max-width:900px;margin:0 auto;padding:96px 22px 32px;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin:0 0 18px;">
+        <svg width="20" height="24" viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 1px 1.5px rgba(0,0,0,0.22));flex-shrink:0;" aria-hidden="true">
+          <defs>
+            <clipPath id="njShield"><path d="M2 3.2 Q2 2 3.2 2 H20.8 Q22 2 22 3.2 V14.5 C22 21.5 12 26 12 26 C12 26 2 21.5 2 14.5 Z"/></clipPath>
+            <linearGradient id="njEmboss" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.4"/>
+              <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+              <stop offset="1" stop-color="#000000" stop-opacity="0.28"/>
+            </linearGradient>
+          </defs>
+          <g clip-path="url(#njShield)">
+            <rect x="0" y="0" width="24" height="28" fill="#012169"/>
+            <path d="M0 0 L24 28 M24 0 L0 28" stroke="#ffffff" stroke-width="5"/>
+            <path d="M0 0 L24 28 M24 0 L0 28" stroke="#C8102E" stroke-width="2"/>
+            <path d="M12 0 V28 M0 14 H24" stroke="#ffffff" stroke-width="7"/>
+            <path d="M12 0 V28 M0 14 H24" stroke="#C8102E" stroke-width="3.6"/>
+            <rect x="0" y="0" width="24" height="28" fill="url(#njEmboss)"/>
+          </g>
+          <path d="M2 3.2 Q2 2 3.2 2 H20.8 Q22 2 22 3.2 V14.5 C22 21.5 12 26 12 26 C12 26 2 21.5 2 14.5 Z" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
+        </svg>
+        <span style="font-family:'Gabarito';font-weight:700;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;">UK's dedicated search</span>
+      </div>
+      <h1 style="font-family:'Gabarito';font-weight:900;font-size:clamp(40px,6.6vw,76px);line-height:0.98;letter-spacing:-0.045em;color:var(--ink);margin:0;text-wrap:balance;">
+        <em style="font-family:'League Script',cursive;font-style:normal;font-weight:400;-webkit-text-stroke:0.7px #6b70c2;font-size:0.52em;color:#6b70c2;vertical-align:0.1em;margin-right:0.16em;">for</em>churches, chapels <em style="font-family:'League Script',cursive;font-style:normal;font-weight:400;-webkit-text-stroke:0.7px #6b70c2;font-size:0.6em;color:#6b70c2;margin:0 0.12em;vertical-align:0.02em;">and</em> places of worship
+      </h1>
+      <p style="font:300 20px/1.5 'Space Grotesk';color:var(--ink2);margin:24px auto 0;max-width:540px;">Describe what you're looking for in plain English. We search churches, chapels &amp; gathering spaces across 30+ sources.</p>
+
+      <div style="margin:44px auto 0;max-width:680px;">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:8px 8px 8px 20px;box-shadow:0 14px 50px rgba(0,0,0,0.07);" style-focus-within="border-color:var(--ink3);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#86868b" stroke-width="2" style="flex-shrink:0;"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input value="{{ query }}" onChange="{{ onQuery }}" onKeyDown="{{ onKey }}" placeholder="e.g. former Methodist chapel with a hall, Yorkshire, under £200k" style="flex:1;border:none;outline:none;background:none;font:400 16px 'Space Grotesk';color:var(--ink);padding:11px 4px;min-width:0;" />
+          <button title="Voice search" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;border:none;background:var(--surface2);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#ececef;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </button>
+          <div style="position:relative;flex-shrink:0;display:inline-flex;border-radius:14px;" style-before="content:'';position:absolute;inset:-3px;border-radius:17px;background:conic-gradient(from 35deg,#ff2d55,#ff9500,#ffcc00,#34c759,#00c7be,#007aff,#5856d6,#af52de,#ff2d55);filter:blur(6px);opacity:0.85;z-index:0;animation:naveHaloGlow 4s linear infinite;" style-after="content:'';position:absolute;inset:-1.5px;border-radius:15.5px;background:conic-gradient(from 35deg,#ff2d55,#ff9500,#ffcc00,#34c759,#00c7be,#007aff,#5856d6,#af52de,#ff2d55);z-index:0;animation:naveHaloRing 4s linear infinite;">
+            <button onClick="{{ runSearch }}" style="position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;background:var(--btnbg);color:var(--btnfg);border:none;border-radius:14px;padding:0 22px;height:44px;font:500 15px 'Space Grotesk';cursor:pointer;transition:background .2s;" style-hover="background:var(--btnbg-h);">Search</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:22px;">
+          <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="4">
+            <button onClick="{{ ex.pick }}" style="border:1px solid var(--border2);border-radius:980px;padding:8px 16px;font:400 13px 'Space Grotesk';color:var(--ink2);background:var(--surface);cursor:pointer;transition:all .2s;" style-hover="border-color:var(--ink);color:var(--ink);">{{ ex.text }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured showcase -->
+    <sc-if value="{{ showFeatured }}" hint-placeholder-val="{{ true }}">
+    <section style="max-width:1040px;margin:40px auto 0;padding:0 22px;">
+      <div onClick="{{ openFeatured }}" style="position:relative;border-radius:28px;overflow:hidden;cursor:pointer;height:480px;background:var(--surface2);background-image:linear-gradient(135deg,rgba(0,0,0,0.022) 25%,transparent 25%,transparent 50%,rgba(0,0,0,0.022) 50%,rgba(0,0,0,0.022) 75%,transparent 75%);background-size:22px 22px;border:1px solid var(--line3);transition:box-shadow .3s;" style-hover="box-shadow:0 24px 70px rgba(0,0,0,0.12);">
+        <span style="position:absolute;top:24px;left:24px;font:500 11px ui-monospace,Menlo,monospace;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);background:var(--glass);padding:7px 13px;border-radius:980px;">Photo · {{ featured.img }}</span>
+        <div style="position:absolute;left:28px;bottom:28px;right:28px;max-width:440px;background:var(--glass);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);border:1px solid rgba(255,255,255,0.6);border-radius:20px;padding:24px 26px;">
+          <p style="font:500 11px 'Space Grotesk';letter-spacing:0.14em;text-transform:uppercase;color:{{ accent }};margin:0 0 10px;">Featured · Grade {{ featured.grade }} Listed</p>
+          <h3 style="font-family:'Gabarito';font-weight:800;font-size:27px;letter-spacing:-0.02em;color:var(--ink);margin:0 0 4px;">{{ featured.title }}</h3>
+          <p style="font:400 14px 'Space Grotesk';color:var(--ink2);margin:0 0 16px;">{{ featured.location }}, {{ featured.county }}</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <span style="font-family:'Gabarito';font-weight:700;font-size:24px;color:var(--ink);">{{ featured.priceRaw }}</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;background:var(--btnbg);color:var(--btnfg);border-radius:980px;padding:9px 18px;font:500 13px 'Space Grotesk';">View details →</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- Trust strip -->
+    <section style="max-width:1040px;margin:64px auto 90px;padding:0 22px;text-align:center;">
+      <p style="font:500 12px 'Space Grotesk';letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 22px;">Aggregating every source, so you don't have to</p>
+      <div style="display:flex;flex-wrap:wrap;gap:14px 36px;align-items:center;justify-content:center;">
+        <sc-for list="{{ sources }}" as="s" hint-placeholder-count="6">
+          <span style="font-family:'Gabarito';font-weight:600;font-size:17px;color:var(--ink4);letter-spacing:-0.01em;">{{ s }}</span>
+        </sc-for>
+      </div>
+    </section>
+
+  </main>
+  </sc-if>
+
+  <!-- ───────── RESULTS SCREEN ───────── -->
+  <sc-if value="{{ isResults }}" hint-placeholder-val="{{ true }}">
+  <main style="max-width:1040px;margin:0 auto;padding:36px 22px 90px;animation:riseIn .55s cubic-bezier(.16,1,.3,1) both;">
+    <button onClick="{{ goSearch }}" style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;font:400 13px 'Space Grotesk';color:var(--ink2);margin-bottom:20px;" style-hover="color:var(--ink);">← New search</button>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:8px;">
+      <div>
+        <h1 style="font-family:'Gabarito';font-weight:900;font-size:clamp(28px,4vw,40px);letter-spacing:-0.035em;color:var(--ink);margin:0;">{{ total }} properties</h1>
+        <p style="font:300 16px 'Space Grotesk';color:var(--ink2);margin:6px 0 0;">for "{{ queryEcho }}"</p>
+      </div>
+      <select onChange="{{ setSort }}" value="{{ sortBy }}" style="border:1px solid var(--border);border-radius:980px;padding:9px 16px;font:400 14px 'Space Grotesk';background:var(--surface);color:var(--ink);cursor:pointer;outline:none;">
+        <option value="relevance">Best match</option>
+        <option value="price_asc">Price: low → high</option>
+        <option value="price_desc">Price: high → low</option>
+        <option value="date">Newest first</option>
+      </select>
+    </div>
+
+    <sc-for list="{{ bands }}" as="band" hint-placeholder-count="2">
+      <div style="margin-top:40px;">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:18px;">
+          <span style="font:500 12px 'Space Grotesk';letter-spacing:0.12em;text-transform:uppercase;color:var(--ink);">{{ band.label }}</span>
+          <span style="font:400 12px 'Space Grotesk';color:var(--ink4);">{{ band.count }}</span>
+          <span style="flex:1;height:1px;background:var(--line);"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;">
+          <sc-for list="{{ band.items }}" as="p" hint-placeholder-count="3">
+            <div onClick="{{ p.open }}" style="background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.04);transition:all .28s cubic-bezier(.16,1,.3,1);" style-hover="transform:translateY(-4px);box-shadow:0 16px 44px rgba(0,0,0,0.1);border-color:rgba(0,0,0,0.1);">
+              <div style="position:relative;height:178px;background:var(--surface2);background-image:linear-gradient(135deg,rgba(0,0,0,0.022) 25%,transparent 25%,transparent 50%,rgba(0,0,0,0.022) 50%,rgba(0,0,0,0.022) 75%,transparent 75%);background-size:18px 18px;display:flex;align-items:center;justify-content:center;">
+                <span style="font:500 10px ui-monospace,Menlo,monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink4);">{{ p.img }}</span>
+                <span style="position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:6px;background:var(--glass2);backdrop-filter:blur(10px);border-radius:980px;padding:5px 11px;font:500 12px 'Space Grotesk';color:var(--ink);">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ p.scoreColor }};display:inline-block;"></span>{{ p.score }}% match
+                </span>
+                <button onClick="{{ p.save }}" title="Save" style="position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:none;background:var(--glass2);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ p.heartFill }}" stroke="currentColor" stroke-width="1.8"><path d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09C12.09 3.81 13.76 3 15.5 3 18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.18L12 20.5z"/></svg>
+                </button>
+              </div>
+              <div style="padding:18px 20px 20px;">
+                <p style="font:500 11px 'Space Grotesk';letter-spacing:0.08em;text-transform:uppercase;color:var(--ink4);margin:0 0 7px;">{{ p.source }}</p>
+                <h3 style="font-family:'Gabarito';font-weight:700;font-size:18px;letter-spacing:-0.01em;color:var(--ink);margin:0 0 4px;line-height:1.2;">{{ p.title }}</h3>
+                <p style="font:400 13px 'Space Grotesk';color:var(--ink2);margin:0 0 14px;">{{ p.location }}, {{ p.county }}</p>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                  <span style="font-family:'Gabarito';font-weight:700;font-size:21px;color:var(--ink);">{{ p.priceRaw }}</span>
+                  <div style="display:flex;gap:6px;">
+                    <sc-for list="{{ p.featList }}" as="f" hint-placeholder-count="2">
+                      <span style="border:1px solid var(--border2);border-radius:980px;padding:4px 11px;font:400 11px 'Space Grotesk';color:var(--ink2);">{{ f }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </main>
+  </sc-if>
+
+  <!-- ───────── DETAIL SCREEN ───────── -->
+  <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ true }}">
+  <main style="max-width:1040px;margin:0 auto;padding:30px 22px 100px;animation:riseIn .55s cubic-bezier(.16,1,.3,1) both;">
+    <button onClick="{{ goResults }}" style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;font:400 13px 'Space Grotesk';color:var(--ink2);margin-bottom:22px;" style-hover="color:var(--ink);">← Back to results</button>
+
+    <div style="position:relative;border-radius:28px;overflow:hidden;height:440px;background:var(--surface2);background-image:linear-gradient(135deg,rgba(0,0,0,0.022) 25%,transparent 25%,transparent 50%,rgba(0,0,0,0.022) 50%,rgba(0,0,0,0.022) 75%,transparent 75%);background-size:24px 24px;border:1px solid var(--line3);display:flex;align-items:center;justify-content:center;">
+      <span style="font:500 11px ui-monospace,Menlo,monospace;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink4);background:var(--glass);padding:7px 14px;border-radius:980px;">Photo · {{ selected.img }}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+      <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="4">
+        <div style="height:88px;border-radius:16px;background:var(--surface2);background-image:linear-gradient(135deg,rgba(0,0,0,0.022) 25%,transparent 25%,transparent 50%,rgba(0,0,0,0.022) 50%,rgba(0,0,0,0.022) 75%,transparent 75%);background-size:14px 14px;border:1px solid var(--line3);display:flex;align-items:center;justify-content:center;">
+          <span style="font:500 9px ui-monospace,Menlo,monospace;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink4);">{{ t }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:52px;margin-top:44px;align-items:start;">
+      <!-- main column -->
+      <div>
+        <p style="font:500 11px 'Space Grotesk';letter-spacing:0.1em;text-transform:uppercase;color:var(--ink4);margin:0 0 10px;">{{ selected.source }}</p>
+        <h1 style="font-family:'Gabarito';font-weight:900;font-size:clamp(30px,4.2vw,46px);letter-spacing:-0.035em;line-height:1.04;color:var(--ink);margin:0 0 12px;text-wrap:balance;">{{ selected.title }}</h1>
+        <p style="font-family:'Gabarito';font-weight:700;font-size:28px;color:var(--ink);margin:0 0 18px;">{{ selected.priceRaw }}</p>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px 18px;font:400 14px 'Space Grotesk';color:var(--ink2);margin-bottom:18px;">
+          <span>{{ selected.location }}</span>
+          <span style="color:var(--border);">·</span>
+          <span>{{ selected.county }}</span>
+          <span style="color:var(--border);">·</span>
+          <span>{{ selected.postcode }}</span>
+          <span style="color:var(--border);">·</span>
+          <span>Listed {{ selected.ago }}</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px;">
+          <sc-if value="{{ selected.listed }}" hint-placeholder-val="{{ true }}">
+            <span style="background:#f3efe7;color:#7a6326;border-radius:980px;padding:6px 14px;font:500 12px 'Space Grotesk';">Grade {{ selected.grade }} Listed</span>
+          </sc-if>
+          <sc-if value="{{ selected.isAuction }}" hint-placeholder-val="{{ true }}">
+            <span style="background:#f0ece8;color:#8a5a2b;border-radius:980px;padding:6px 14px;font:500 12px 'Space Grotesk';">Auction lot</span>
+          </sc-if>
+          <sc-for list="{{ selected.featList }}" as="f" hint-placeholder-count="3">
+            <span style="border:1px solid var(--border2);border-radius:980px;padding:6px 14px;font:400 12px 'Space Grotesk';color:var(--ink2);">{{ f }}</span>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:34px;">
+          <button style="display:inline-flex;align-items:center;gap:8px;background:var(--btnbg);color:var(--btnfg);border:none;border-radius:980px;padding:12px 24px;font:500 15px 'Space Grotesk';cursor:pointer;transition:background .2s;" style-hover="background:var(--btnbg-h);">Express interest</button>
+          <button onClick="{{ selSave }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:980px;padding:12px 22px;font:500 15px 'Space Grotesk';cursor:pointer;transition:all .2s;" style-hover="background:var(--surface2);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ selHeartFill }}" stroke="currentColor" stroke-width="1.8"><path d="M12 20.5l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.74 0 3.41.81 4.5 2.09C12.09 3.81 13.76 3 15.5 3 18 3 20 5 20 7.5c0 3.78-3.4 6.86-8.55 11.18L12 20.5z"/></svg>{{ saveLabel }}
+          </button>
+          <button style="display:inline-flex;align-items:center;gap:8px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:980px;padding:12px 22px;font:500 15px 'Space Grotesk';cursor:pointer;transition:all .2s;" style-hover="background:var(--surface2);">View on {{ selected.source }} ↗</button>
+        </div>
+
+        <p style="font:300 17px/1.7 'Space Grotesk';color:var(--ink5);margin:0 0 34px;">{{ selected.desc }}</p>
+
+        <div style="border:1px solid var(--line);border-radius:20px;padding:24px 26px;background:var(--surface);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ accent }};display:inline-block;"></span>
+            <h3 style="font-family:'Gabarito';font-weight:700;font-size:16px;color:var(--ink);margin:0;">About this property</h3>
+          </div>
+          <p style="font:300 15px/1.7 'Space Grotesk';color:var(--ink5);margin:0;">{{ selected.analysis }}</p>
+        </div>
+      </div>
+
+      <!-- sidebar -->
+      <aside style="display:flex;flex-direction:column;gap:16px;position:sticky;top:72px;">
+        <div style="border:1px solid var(--line);border-radius:20px;background:var(--surface);overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line2);">
+            <span style="font:500 13px 'Space Grotesk';color:var(--ink);">Search match</span>
+            <span style="font-family:'Gabarito';font-weight:800;font-size:20px;color:{{ selected.scoreColor }};">{{ selected.score }}%</span>
+          </div>
+          <div style="display:flex;border-bottom:1px solid var(--line2);">
+            <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid var(--line2);">
+              <div style="font-family:'Gabarito';font-weight:800;font-size:18px;color:#1a7a3c;">{{ exact }}</div>
+              <div style="font:400 10px 'Space Grotesk';letter-spacing:0.06em;text-transform:uppercase;color:var(--ink4);margin-top:2px;">Exact</div>
+            </div>
+            <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid var(--line2);">
+              <div style="font-family:'Gabarito';font-weight:800;font-size:18px;color:#c98a00;">{{ close }}</div>
+              <div style="font:400 10px 'Space Grotesk';letter-spacing:0.06em;text-transform:uppercase;color:var(--ink4);margin-top:2px;">Close</div>
+            </div>
+            <div style="flex:1;padding:14px 0;text-align:center;">
+              <div style="font-family:'Gabarito';font-weight:800;font-size:18px;color:var(--ink4);">{{ miss }}</div>
+              <div style="font:400 10px 'Space Grotesk';letter-spacing:0.06em;text-transform:uppercase;color:var(--ink4);margin-top:2px;">Miss</div>
+            </div>
+          </div>
+          <div style="padding:8px 20px 14px;">
+            <sc-for list="{{ crit }}" as="c" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--line3);font:400 13px 'Space Grotesk';">
+                <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:{{ c.dot }};display:inline-block;"></span>
+                <span style="color:{{ c.labelColor }};">{{ c.label }}</span>
+                <span style="margin-left:auto;font-size:12px;color:var(--ink4);">{{ c.detail }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border:1px solid var(--line);border-radius:20px;background:var(--surface);padding:16px 20px;">
+          <div style="font:500 13px 'Space Grotesk';color:var(--ink);margin-bottom:12px;">Quick actions</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button style="width:100%;background:var(--btnbg);color:var(--btnfg);border:none;border-radius:980px;padding:11px;font:500 14px 'Space Grotesk';cursor:pointer;" style-hover="background:var(--btnbg-h);">Express interest</button>
+            <button onClick="{{ selSave }}" style="width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:980px;padding:11px;font:500 14px 'Space Grotesk';cursor:pointer;" style-hover="background:var(--surface2);">{{ saveLabel }} property</button>
+          </div>
+        </div>
+
+        <div style="border:1px solid var(--line);border-radius:20px;background:var(--surface);overflow:hidden;">
+          <div style="font:500 13px 'Space Grotesk';color:var(--ink);padding:16px 20px 4px;">Property details</div>
+          <div style="padding:0 20px 12px;">
+            <sc-for list="{{ details }}" as="d" hint-placeholder-count="6">
+              <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line3);font:400 13px 'Space Grotesk';">
+                <span style="color:var(--ink4);">{{ d.k }}</span>
+                <span style="color:var(--ink);font-weight:500;text-align:right;">{{ d.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  </sc-if>
+
+  <!-- ───────── FOOTER ───────── -->
+  <footer style="border-top:1px solid var(--line);background:var(--bg);">
+    <div style="max-width:1040px;margin:0 auto;padding:30px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;">
+        <img src="assets/nave_black.svg" alt="Nave" style="height:15px;width:auto;display:block;opacity:0.5;" />
+      </div>
+      <p style="font:400 12px 'Space Grotesk';color:var(--ink4);margin:0;">© 2026 Nave · Church &amp; Gathering Space Intelligence · UK hosted · GDPR compliant</p>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:960},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;search&quot;,&quot;options&quot;:[&quot;search&quot;,&quot;results&quot;,&quot;detail&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;showFeatured&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;#1a7a3c&quot;,&quot;options&quot;:[&quot;#1a7a3c&quot;,&quot;#0071e3&quot;,&quot;#1d1d1f&quot;,&quot;#9a3b1f&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { screen: "search", query: "", selectedId: 1, sortBy: "relevance", saved: [], dark: false };
+
+  componentDidMount() {
+    if (this.props.startScreen && this.props.startScreen !== "search") {
+      this.setState({ screen: this.props.startScreen });
+    }
+    try { if (localStorage.getItem("nave-theme") === "dark") this.setState({ dark: true }); } catch (e) {}
+  }
+
+  toggleTheme() {
+    this.setState(s => {
+      const dark = !s.dark;
+      try { localStorage.setItem("nave-theme", dark ? "dark" : "light"); } catch (e) {}
+      return { dark };
+    });
+  }
+
+  go(screen) { this.setState({ screen }); try { window.scrollTo({ top: 0 }); } catch (e) {} }
+  openDetail(id) { this.setState({ screen: "detail", selectedId: id }); try { window.scrollTo({ top: 0 }); } catch (e) {} }
+  doSave(id) {
+    this.setState(s => ({ saved: s.saved.includes(id) ? s.saved.filter(x => x !== id) : [...s.saved, id] }));
+  }
+
+  data() {
+    const F = { parking: "Parking", graveyard: "Graveyard", hall: "Hall", spire: "Spire", organ: "Organ", vestry: "Vestry" };
+    const rows = [
+      { id:1, title:"St. Mark's Methodist Chapel", location:"Halifax", county:"West Yorkshire", postcode:"HX1 2AA", price:165000, priceRaw:"£165,000", source:"Rightmove", listing:"Private treaty", grade:"II", listed:true, isAuction:false, feats:["hall","organ"], img:"Chapel exterior", score:96, ago:"2 days ago",
+        desc:"A handsome stone-built Wesleyan chapel of 1872, retaining its gallery, pitch-pine pews and a separate schoolroom hall to the rear. Offered with vacant possession and clear conversion potential.",
+        analysis:"A rare survivor with much of its original character intact. The attached hall makes this unusually flexible — viable as a single dwelling, a live-work studio, or a community venue. Grade II listing will shape any scheme, so early pre-application advice is sensible.",
+        criteria:[{label:"Under £200,000",status:"exact",detail:"£165k"},{label:"In Yorkshire",status:"exact",detail:"Halifax"},{label:"Has a hall",status:"exact",detail:""},{label:"Off-street parking",status:"miss",detail:""},{label:"Period character",status:"close",detail:"Victorian"}] },
+      { id:2, title:"Former St. Andrew's Church", location:"Margate", county:"Kent", postcode:"CT9 1RW", price:92500, priceRaw:"£92,500", source:"SDL Auctions", listing:"Auction", grade:"", listed:false, isAuction:true, feats:["parking","graveyard"], img:"Church & churchyard", score:88, ago:"5 days ago",
+        desc:"Former parish church close to Margate seafront, set in a mature churchyard with off-street parking. Sold by public auction with a guide reflecting its conversion potential.",
+        analysis:"Coastal location and a generous plot are the headline draws. The graveyard will require careful handling, but the parking and footprint give real flexibility for a residential or mixed-use conversion.",
+        criteria:[{label:"Under £200,000",status:"exact",detail:"£92.5k"},{label:"In Yorkshire",status:"miss",detail:"Kent"},{label:"Has a hall",status:"miss",detail:""},{label:"Off-street parking",status:"exact",detail:""},{label:"Graveyard",status:"exact",detail:""}] },
+      { id:5, title:"Wesleyan Chapel & Hall", location:"Barnsley", county:"South Yorkshire", postcode:"S70 2AA", price:119000, priceRaw:"£119,000", source:"Rightmove", listing:"Private treaty", grade:"", listed:false, isAuction:false, feats:["parking","hall"], img:"Brick chapel exterior", score:91, ago:"yesterday",
+        desc:"Red-brick Wesleyan chapel with adjoining hall and on-site parking, in a settled residential position. Well suited to community or residential use.",
+        analysis:"A genuinely strong all-rounder — hall, parking and a workable price in a Yorkshire location. Few compromises for the budget, and the brick construction lends itself to straightforward conversion.",
+        criteria:[{label:"Under £200,000",status:"exact",detail:"£119k"},{label:"In Yorkshire",status:"exact",detail:"Barnsley"},{label:"Has a hall",status:"exact",detail:""},{label:"Off-street parking",status:"exact",detail:""},{label:"Period character",status:"close",detail:"Edwardian"}] },
+      { id:3, title:"Bethel Chapel", location:"Treorchy", county:"Mid Glamorgan", postcode:"CF42 6AA", price:78000, priceRaw:"£78,000", source:"Zoopla", listing:"Private treaty", grade:"", listed:false, isAuction:false, feats:["hall"], img:"Valleys chapel frontage", score:82, ago:"1 week ago",
+        desc:"A compact valleys chapel with intact hall, presented in original decorative order. Competitively priced for the area with scope for a sympathetic conversion.",
+        analysis:"Excellent value for the floor area on offer. The hall doubles the usable space, and the modest price leaves headroom for a thorough refurbishment.",
+        criteria:[{label:"Under £200,000",status:"exact",detail:"£78k"},{label:"In Yorkshire",status:"miss",detail:"Wales"},{label:"Has a hall",status:"exact",detail:""},{label:"Conversion potential",status:"close",detail:""},{label:"Period character",status:"close",detail:""}] },
+      { id:7, title:"Providence Chapel", location:"Burnley", county:"Lancashire", postcode:"BB11 1AA", price:64000, priceRaw:"£64,000", source:"Pugh Auctions", listing:"Auction", grade:"", listed:false, isAuction:true, feats:["hall"], img:"Chapel street view", score:79, ago:"4 days ago",
+        desc:"Nonconformist chapel offered as an auction lot, with hall accommodation and clear conversion appeal at an accessible guide price.",
+        analysis:"Priced to move at auction. The hall adds flexibility, and the low entry point suits a buyer comfortable with a full refurbishment.",
+        criteria:[{label:"Under £200,000",status:"exact",detail:"£64k"},{label:"In Yorkshire",status:"miss",detail:"Lancashire"},{label:"Has a hall",status:"exact",detail:""},{label:"Auction lot",status:"close",detail:""},{label:"Conversion potential",status:"close",detail:""}] },
+      { id:4, title:"St. Columba's Church", location:"Edinburgh", county:"Midlothian", postcode:"EH3 6BG", price:465000, priceRaw:"£465,000", source:"Savills", listing:"Private treaty", grade:"B", listed:true, isAuction:false, feats:["spire","organ","vestry"], img:"City church with spire", score:74, ago:"3 days ago",
+        desc:"Category B listed Victorian church in central Edinburgh, with spire, pipe organ and vestry. A landmark building of considerable presence.",
+        analysis:"A statement building in a prime city setting. Listing and scale mean a substantial project, but the architectural quality and location underwrite long-term value.",
+        criteria:[{label:"Under £200,000",status:"miss",detail:"£465k"},{label:"In Yorkshire",status:"miss",detail:"Scotland"},{label:"Has organ",status:"exact",detail:""},{label:"Listed building",status:"exact",detail:"Grade B"},{label:"Spire",status:"exact",detail:""}] },
+      { id:8, title:"St. Saviour's Church", location:"Croydon", county:"Greater London", postcode:"CR0 1AA", price:525000, priceRaw:"£525,000", source:"Foxtons", listing:"Private treaty", grade:"", listed:false, isAuction:false, feats:["parking","vestry"], img:"London church exterior", score:71, ago:"6 days ago",
+        desc:"Substantial London church with parking and vestry accommodation, in a well-connected suburban location with strong transport links.",
+        analysis:"London scarcity drives the value here. Parking and transport links broaden the end uses, from residential conversion to a community or studio scheme.",
+        criteria:[{label:"Under £200,000",status:"miss",detail:"£525k"},{label:"In Yorkshire",status:"miss",detail:"London"},{label:"Off-street parking",status:"exact",detail:""},{label:"Vestry",status:"exact",detail:""},{label:"Transport links",status:"close",detail:""}] },
+      { id:6, title:"Holy Trinity Church", location:"Exeter", county:"Devon", postcode:"EX1 1AA", price:340000, priceRaw:"£340,000", source:"Strutt & Parker", listing:"Private treaty", grade:"II*", listed:true, isAuction:false, feats:["graveyard","spire"], img:"Parish church & spire", score:68, ago:"2 weeks ago",
+        desc:"Grade II* parish church near Exeter, set within a historic churchyard beneath a prominent spire. A building of exceptional heritage significance.",
+        analysis:"The II* listing places this among the most protected buildings on the market. Expect a long consenting process; best suited to a heritage-led custodian rather than a quick conversion.",
+        criteria:[{label:"Under £200,000",status:"miss",detail:"£340k"},{label:"In Yorkshire",status:"miss",detail:"Devon"},{label:"Graveyard",status:"exact",detail:""},{label:"Listed building",status:"exact",detail:"Grade II*"},{label:"Spire",status:"exact",detail:""}] },
+    ];
+    return rows.map(p => ({ ...p, featList: p.feats.map(f => F[f]) }));
+  }
+
+  bandColor(s) {
+    const accent = this.props.accent || "#1a7a3c";
+    return s >= 90 ? accent : s >= 75 ? "#c98a00" : "#86868b";
+  }
+
+  renderVals() {
+    const accent = this.props.accent || "#1a7a3c";
+    const { screen, sortBy, selectedId, saved } = this.state;
+
+    const all = this.data().map(p => ({
+      ...p,
+      isSaved: saved.includes(p.id),
+      heartFill: saved.includes(p.id) ? accent : "none",
+      scoreColor: this.bandColor(p.score),
+      open: () => this.openDetail(p.id),
+      save: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.doSave(p.id); },
+    }));
+
+    let sorted = [...all];
+    if (sortBy === "price_asc") sorted.sort((a, b) => a.price - b.price);
+    else if (sortBy === "price_desc") sorted.sort((a, b) => b.price - a.price);
+    else if (sortBy === "date") sorted.sort((a, b) => a.id - b.id);
+    else sorted.sort((a, b) => b.score - a.score);
+
+    const bandDefs = [
+      { label: "Perfect matches", test: s => s >= 90 },
+      { label: "Strong matches", test: s => s >= 75 && s < 90 },
+      { label: "Worth exploring", test: s => s < 75 },
+    ];
+    const bands = bandDefs
+      .map(b => { const items = sorted.filter(p => b.test(p.score)); return { label: b.label, count: items.length, items }; })
+      .filter(b => b.items.length > 0);
+
+    const selected = all.find(p => p.id === selectedId) || all[0];
+    const crit = selected.criteria.map(c => ({
+      ...c,
+      dot: c.status === "exact" ? "#1a7a3c" : c.status === "close" ? "#c98a00" : "#d2d2d7",
+      labelColor: c.status === "miss" ? "var(--ink4)" : "var(--ink)",
+    }));
+    const exact = selected.criteria.filter(c => c.status === "exact").length;
+    const close = selected.criteria.filter(c => c.status === "close").length;
+    const miss = selected.criteria.filter(c => c.status === "miss").length;
+
+    const details = [
+      { k: "Source", v: selected.source },
+      { k: "Listing type", v: selected.listing },
+      { k: "Location", v: selected.location },
+      { k: "County", v: selected.county },
+      { k: "Postcode", v: selected.postcode },
+      { k: "Listed", v: selected.listed ? ("Yes — Grade " + selected.grade) : "No" },
+      { k: "First seen", v: selected.ago },
+    ];
+
+    const examples = [
+      "Affordable chapels with a hall in Yorkshire",
+      "Listed church to convert, under £500k",
+      "Former Methodist chapel, South East",
+      "Church with parking near London",
+    ].map(t => ({ text: t, pick: () => this.setState({ query: t }) }));
+
+    const featured = all.find(p => p.id === 1);
+
+    return {
+      isSearch: screen === "search", isResults: screen === "results", isDetail: screen === "detail",
+      theme: this.state.dark ? "dark" : "light",
+      themeIcon: this.state.dark ? "☀" : "☾",
+      toggleTheme: () => this.toggleTheme(),
+      accent,
+      showFeatured: this.props.showFeatured !== false,
+      query: this.state.query,
+      queryEcho: (this.state.query && this.state.query.trim()) || "churches, chapels & sacred spaces",
+      total: all.length,
+      bands, selected, crit, exact, close, miss, details, examples, featured,
+      sortBy,
+      savedCount: saved.length,
+      thumbs: ["Interior — nave", "Detail — windows", "Exterior — rear", "Floor plan"],
+      sources: ["Rightmove", "Zoopla", "Savills", "SDL Auctions", "Church of England", "Strutt & Parker"],
+      saveLabel: saved.includes(selectedId) ? "Saved" : "Save",
+      selHeartFill: saved.includes(selectedId) ? accent : "none",
+      goSearch: () => this.go("search"),
+      goResults: () => this.go("results"),
+      runSearch: () => this.go("results"),
+      openFeatured: () => this.openDetail(1),
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      onKey: (e) => { if (e.key === "Enter") { e.preventDefault(); this.go("results"); } },
+      setSort: (e) => this.setState({ sortBy: e.target.value }),
+      selSave: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.doSave(selectedId); },
+    };
+  }
+}
+</script>
+</body>
+</html>

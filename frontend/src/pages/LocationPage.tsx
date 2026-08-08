@@ -1,201 +1,87 @@
-/**
- * LocationPage — /churches-for-sale/:region
- *
- * SEO-optimised landing page for each UK region.
- * Shows filtered listings with descriptive content for Google ranking.
- * Each page targets: "churches for sale in [region]" keywords.
- */
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { useSEO } from "../hooks/useSEO";
-import { api } from "../api/client";
-import PropertyCard from "../components/property/PropertyCard";
-import SkeletonCards from "../components/ui/SkeletonCards";
+import { useNavigate } from "react-router-dom";
+import { useSearchStore } from "../stores/searchStore";
 
-const REGION_META: Record<string, {
-  name:        string;
-  description: string;
-  facts:       string;
-}> = {
-  london: {
-    name: "London",
-    description: "Churches and chapels for sale in London and Greater London, including inner city ecclesiastical buildings, places of worship, and former churches available for conversion or community use.",
-    facts: "London has over 2,000 listed church buildings. Many former Victorian churches in areas like Hackney, Croydon, and Greenwich are now available for community or residential conversion.",
-  },
-  yorkshire: {
-    name: "Yorkshire",
-    description: "Churches, chapels, and places of worship for sale across Yorkshire including West Yorkshire, South Yorkshire, North Yorkshire, and East Yorkshire.",
-    facts: "Yorkshire has one of the highest concentrations of Methodist chapels in England, many of which became redundant as congregations declined. Stone-built chapels in areas like Barnsley, Halifax, and Huddersfield regularly come to market.",
-  },
-  kent: {
-    name: "Kent",
-    description: "Churches and chapels for sale in Kent, the Garden of England, including properties near Canterbury, Maidstone, and the Kent coast.",
-    facts: "Kent is home to Canterbury Cathedral and hundreds of medieval parish churches. Redundant rural churches in villages across the county offer unique conversion opportunities.",
-  },
-  surrey: {
-    name: "Surrey",
-    description: "Churches and places of worship for sale in Surrey, including properties in Guildford, Woking, and the Surrey Hills.",
-    facts: "Surrey's prosperous commuter belt contains numerous Victorian and Edwardian church buildings, many of which are available as residential conversions or community spaces.",
-  },
-  midlands: {
-    name: "The Midlands",
-    description: "Churches and chapels for sale across the Midlands including Birmingham, Coventry, Leicester, Nottingham, and surrounding counties.",
-    facts: "The Midlands industrial heritage produced thousands of nonconformist chapels during the 19th century. Many of these substantial brick buildings are now available for new uses.",
-  },
-  manchester: {
-    name: "Manchester",
-    description: "Churches and places of worship for sale in Manchester and Greater Manchester including Salford, Stockport, and surrounding areas.",
-    facts: "Manchester's rapid Victorian expansion created hundreds of churches and chapels across the city. Many Grade II listed examples in areas like Ancoats and Hulme are available for sympathetic conversion.",
-  },
-  wales: {
-    name: "Wales",
-    description: "Churches and chapels for sale across Wales including Cardiff, Swansea, and rural Welsh communities.",
-    facts: "Wales has an extraordinary density of Nonconformist chapels per head of population. Many beautiful stone chapels in the Welsh valleys and rural areas are available at very competitive prices.",
-  },
-  scotland: {
-    name: "Scotland",
-    description: "Churches and places of worship for sale across Scotland including Edinburgh, Glasgow, and the Scottish Highlands.",
-    facts: "Scotland's church buildings reflect its unique religious history, with distinctive Presbyterian kirks alongside Victorian Gothic churches. Many are Category A or B listed buildings.",
-  },
-  devon: {
-    name: "Devon",
-    description: "Churches and chapels for sale in Devon including Exeter, Plymouth, and rural Devon villages.",
-    facts: "Devon has hundreds of ancient parish churches, many dating from Norman times. Methodist chapels in fishing villages and market towns are particularly sought after for conversion.",
-  },
-  lancashire: {
-    name: "Lancashire",
-    description: "Churches and chapels for sale in Lancashire including Blackpool, Preston, Burnley, and the Ribble Valley.",
-    facts: "Lancashire's textile mill towns produced a remarkable collection of Victorian churches and chapels. Many substantial Gothic Revival buildings are available in towns like Burnley, Nelson, and Accrington.",
-  },
-};
+const REGIONS = [
+  { name: "London",       slug:"london",       count: 18, blurb: "Over 2,000 listed church buildings; Victorian churches in Hackney, Croydon and Greenwich come to market regularly." },
+  { name: "Yorkshire",    slug:"yorkshire",    count: 24, blurb: "One of England's highest concentrations of Methodist chapels — stone-built in Barnsley, Halifax and Huddersfield." },
+  { name: "Wales",        slug:"wales",        count: 22, blurb: "Extraordinary density of Nonconformist chapels; beautiful stone buildings in the valleys at competitive prices." },
+  { name: "The Midlands", slug:"the-midlands", count: 19, blurb: "Thousands of 19th-century nonconformist chapels from its industrial heritage, now available for new uses." },
+  { name: "Lancashire",   slug:"lancashire",   count: 15, blurb: "Victorian Gothic Revival churches across the mill towns — Burnley, Nelson and Accrington." },
+  { name: "Manchester",   slug:"manchester",   count: 13, blurb: "Hundreds of churches from rapid Victorian expansion; Grade II listed examples in Ancoats and Hulme." },
+  { name: "Kent",         slug:"kent",         count: 11, blurb: "The Garden of England — medieval parish churches and redundant rural churches near Canterbury and Maidstone." },
+  { name: "Scotland",     slug:"scotland",     count: 9,  blurb: "Distinctive Presbyterian kirks alongside Victorian Gothic, many Category A or B listed." },
+  { name: "Devon",        slug:"devon",        count: 8,  blurb: "Ancient parish churches from Norman times; Methodist chapels in fishing villages and market towns." },
+  { name: "Surrey",       slug:"surrey",       count: 7,  blurb: "Prosperous commuter belt with Victorian and Edwardian church buildings ripe for conversion." },
+];
+
+const totalProps = REGIONS.reduce((a, r) => a + r.count, 0);
 
 export default function LocationPage() {
-  const { region }  = useParams<{ region: string }>();
-  const navigate    = useNavigate();
-  const [listings, setListings] = useState<any[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [total,    setTotal]    = useState(0);
-
-  const meta = REGION_META[region || ""] || {
-    name:        region ? region.charAt(0).toUpperCase() + region.slice(1) : "UK",
-    description: `Churches and chapels for sale in ${region}.`,
-    facts:       "",
-  };
-
   useSEO({
-    title:       `Churches for Sale in ${meta.name}`,
-    description: meta.description,
+    title: "Churches for Sale by Region — Nave",
+    description: "Browse churches, chapels and places of worship for sale across every region of the UK.",
   });
 
-  useEffect(() => {
-    if (!region) return;
-    setLoading(true);
-    api.post("/api/search", {
-      query:   `church in ${region}`,
-      filters: {},
-      page:    1,
-      per_page: 20,
-    }).then(r => {
-      setListings(r.data.results || []);
-      setTotal(r.data.total || 0);
-    }).finally(() => setLoading(false));
-  }, [region]);
+  const navigate = useNavigate();
+  const { setQuery } = useSearchStore();
+
+  function handleRegionClick(region: typeof REGIONS[0]) {
+    setQuery(`churches for sale in ${region.name}`);
+    navigate(`/results?region=${region.slug}`);
+  }
 
   return (
-    <main className="wrap" style={{ paddingTop: 40, paddingBottom: 80 }}>
+    <main style={{ maxWidth:1040, margin:"0 auto", padding:"80px 22px 90px", animation:"riseIn .6s cubic-bezier(.16,1,.3,1) both" }}>
 
-      {/* Hero */}
-      <div style={{ marginBottom: 40 }}>
-        <p style={{ fontSize:"0.75rem", color:"var(--mid)", marginBottom:8,
-                    letterSpacing:".08em", textTransform:"uppercase" }}>
-          Churches for sale
-        </p>
-        <h1 style={{ fontSize:"clamp(1.6rem,4vw,2.4rem)", fontWeight:800,
-                     lineHeight:1.15, marginBottom:16 }}>
-          {meta.name}
+      <section style={{ maxWidth:680, marginBottom:18 }}>
+        <p style={{ font:"500 12px 'Space Grotesk'", letterSpacing:"0.16em", textTransform:"uppercase", color:"var(--ink3)", margin:"0 0 18px" }}>Browse by region</p>
+        <h1 style={{ fontFamily:"'Gabarito'", fontWeight:900, fontSize:"clamp(38px,5.6vw,60px)", lineHeight:1.0, letterSpacing:"-0.04em", color:"var(--ink)", margin:0 }}>
+          Every corner of the UK,{" "}
+          <em style={{ fontFamily:"'League Script', cursive", fontStyle:"normal", fontWeight:400, WebkitTextStroke:"0.7px #6b70c2", color:"#6b70c2", fontSize:"0.72em", verticalAlign:"0.02em" }}>in one place</em>
         </h1>
-        <p style={{ fontSize:"0.92rem", color:"var(--ink-soft)", lineHeight:1.7,
-                    maxWidth:640, marginBottom:0 }}>
-          {meta.description}
+        <p style={{ font:"300 20px/1.55 'Space Grotesk'", color:"var(--ink2)", margin:"24px 0 0", maxWidth:560 }}>
+          Choose a region to see churches, chapels and places of worship currently on the market — aggregated from 30+ sources.
         </p>
-      </div>
+      </section>
 
-      {/* Stats bar */}
-      <div style={{
-        display:"flex", gap:24, marginBottom:32,
-        padding:"12px 0", borderTop:"1px solid var(--rule)",
-        borderBottom:"1px solid var(--rule)",
-      }}>
+      {/* Stats strip */}
+      <div style={{ display:"flex", gap:40, padding:"26px 0 30px", margin:"34px 0 8px", borderTop:"1px solid var(--line)", borderBottom:"1px solid var(--line)" }}>
         <div>
-          <p style={{ fontSize:"1.4rem", fontWeight:800, margin:0 }}>{total}</p>
-          <p style={{ fontSize:"0.72rem", color:"var(--mid)", margin:0 }}>
-            {total === 1 ? "property" : "properties"} listed
-          </p>
+          <p style={{ fontFamily:"'Gabarito'", fontWeight:800, fontSize:30, color:"var(--ink)", margin:0, letterSpacing:"-0.02em" }}>{totalProps}</p>
+          <p style={{ font:"400 13px 'Space Grotesk'", color:"var(--ink3)", margin:"4px 0 0" }}>live listings</p>
         </div>
         <div>
-          <p style={{ fontSize:"1.4rem", fontWeight:800, margin:0 }}>30+</p>
-          <p style={{ fontSize:"0.72rem", color:"var(--mid)", margin:0 }}>sources</p>
+          <p style={{ fontFamily:"'Gabarito'", fontWeight:800, fontSize:30, color:"var(--ink)", margin:0, letterSpacing:"-0.02em" }}>10</p>
+          <p style={{ font:"400 13px 'Space Grotesk'", color:"var(--ink3)", margin:"4px 0 0" }}>regions covered</p>
         </div>
         <div>
-          <p style={{ fontSize:"1.4rem", fontWeight:800, margin:0 }}>Free</p>
-          <p style={{ fontSize:"0.72rem", color:"var(--mid)", margin:0 }}>to search</p>
+          <p style={{ fontFamily:"'Gabarito'", fontWeight:800, fontSize:30, color:"var(--ink)", margin:0, letterSpacing:"-0.02em" }}>30+</p>
+          <p style={{ font:"400 13px 'Space Grotesk'", color:"var(--ink3)", margin:"4px 0 0" }}>sources, updated every 3h</p>
         </div>
       </div>
 
-      {/* Listings */}
-      {loading ? (
-        <SkeletonCards count={6} />
-      ) : listings.length === 0 ? (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--mid)" }}>
-          <p style={{ fontSize:"1rem", marginBottom:12 }}>
-            No listings found in {meta.name} right now.
-          </p>
-          <button className="btn btn-black" onClick={() => navigate("/")}>
-            Search all UK properties
+      {/* Region grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:20, marginTop:34 }}>
+        {REGIONS.map(r => (
+          <button
+            key={r.name}
+            onClick={() => handleRegionClick(r)}
+            style={{ textDecoration:"none", display:"block", background:"var(--surface)", border:"1px solid var(--line)", borderRadius:22, padding:"24px 24px 22px", cursor:"pointer", boxShadow:"0 1px 3px rgba(0,0,0,0.04)", transition:"all .28s cubic-bezier(.16,1,.3,1)", textAlign:"left", width:"100%", fontFamily:"inherit" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform="translateY(-4px)"; (e.currentTarget as HTMLElement).style.boxShadow="0 18px 46px rgba(0,0,0,0.1)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform="none"; (e.currentTarget as HTMLElement).style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"; }}
+          >
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <span style={{ display:"inline-flex", alignItems:"center", gap:7, background:"var(--surface2)", borderRadius:980, padding:"5px 12px", font:"500 12px 'Space Grotesk'", color:"var(--ink2)" }}>
+                <span style={{ width:6, height:6, borderRadius:"50%", background:"#6b70c2", display:"inline-block" }} />
+                {r.count} listings
+              </span>
+              <span style={{ fontSize:18, color:"var(--ink3)", lineHeight:1 }}>→</span>
+            </div>
+            <h3 style={{ fontFamily:"'Gabarito'", fontWeight:800, fontSize:23, letterSpacing:"-0.02em", color:"var(--ink)", margin:"0 0 8px" }}>{r.name}</h3>
+            <p style={{ font:"300 14px/1.6 'Space Grotesk'", color:"var(--ink2)", margin:0 }}>{r.blurb}</p>
           </button>
-        </div>
-      ) : (
-        <div className="results-grid">
-          {listings.map(l => (
-            <PropertyCard key={l.id} property={l} />
-          ))}
-        </div>
-      )}
-
-      {/* SEO content */}
-      {meta.facts && (
-        <div style={{
-          marginTop:48, padding:24,
-          background:"var(--off-white)",
-          border:"1px solid var(--rule)",
-          borderRadius:"var(--r)",
-        }}>
-          <h2 style={{ fontSize:"1rem", fontWeight:700, marginBottom:12 }}>
-            About church properties in {meta.name}
-          </h2>
-          <p style={{ fontSize:"0.85rem", color:"var(--ink-soft)", lineHeight:1.7 }}>
-            {meta.facts}
-          </p>
-        </div>
-      )}
-
-      {/* Region links */}
-      <div style={{ marginTop:40 }}>
-        <p style={{ fontSize:"0.75rem", color:"var(--mid)", marginBottom:12,
-                    letterSpacing:".08em", textTransform:"uppercase" }}>
-          Other regions
-        </p>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-          {Object.entries(REGION_META)
-            .filter(([key]) => key !== region)
-            .map(([key, val]) => (
-              <button key={key}
-                className="btn-sm"
-                onClick={() => navigate(`/churches-for-sale/${key}`)}>
-                {val.name}
-              </button>
-            ))}
-        </div>
+        ))}
       </div>
     </main>
   );
