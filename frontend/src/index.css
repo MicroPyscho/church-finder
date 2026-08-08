@@ -882,3 +882,12 @@ html, body, #root { max-width: 100vw; overflow-x: hidden; }
   .hero-mobile-break > em + *, .hero-mobile-break > em ~ * { padding-left: 0; }
   .search-hero__sub { font-size: 0.78rem; margin-bottom: 20px; }
 }
+
+/* ── Nav desktop/mobile visibility ── */
+.nav-desktop-only { display: flex; }
+.nav-mobile-only  { display: none; }
+
+@media (max-width: 600px) {
+  .nav-desktop-only { display: none; }
+  .nav-mobile-only  { display: flex; }
+}

@@ -31,7 +31,7 @@ const SOURCES = ["Rightmove","Zoopla","Savills","Knight Frank","Auction House","
 
 export default function ResultsPage() {
   const navigate = useNavigate();
-  const { query, results, intent, filters, page, sortBy, setResults, setPage, setSortBy } = useSearchStore();
+  const { query, results, intent, filters, page, sortBy, setResults, setPage, setSortBy, setQuery } = useSearchStore();
   const [searchParams] = useSearchParams();
 
   useSEO({
@@ -114,12 +114,33 @@ export default function ResultsPage() {
             }}>
               {mut.isPending
                 ? <span style={{ color: "var(--ink3)" }}>Searching…</span>
-                : <>{total.toLocaleString()} <span style={{ color: "var(--ink3)", fontWeight: 400 }}>for</span> "{query}"</>
+                :<>{total.toLocaleString()} results <span style={{ color: "var(--ink3)", fontWeight: 400 }}>for</span> "{query}"</>
               }
             </h1>
             {!mut.isPending && total > 0 && (
               <p style={{ font: "400 13px 'Space Grotesk'", color: "var(--ink3)", margin: "6px 0 0" }}>
-                Aggregated from 30+ sources · updated every 3 hours
+               {(() => {
+                  const q = (query || "").toLowerCase();
+                  const RADII: [string, string, number][] = [
+                    ["london","London",45],["yorkshire","Yorkshire",35],
+                    ["wales","Wales",50],["midlands","The Midlands",40],
+                    ["lancashire","Lancashire",30],["manchester","Manchester",25],
+                    ["kent","Kent",30],["scotland","Scotland",60],
+                    ["devon","Devon",40],["surrey","Surrey",25],
+                    ["essex","Essex",30],["sussex","Sussex",30],
+                    ["hampshire","Hampshire",35],["cornwall","Cornwall",40],
+                    ["norfolk","Norfolk",35],["suffolk","Suffolk",30],
+                    ["dorset","Dorset",30],["somerset","Somerset",35],
+                    ["oxford","Oxfordshire",25],["shropshire","Shropshire",30],
+                    ["cumbria","Cumbria",45],["northumberland","Northumberland",45],
+                    ["lincolnshire","Lincolnshire",35],["derbyshire","Derbyshire",30],
+                    ["cheshire","Cheshire",30],["staffordshire","Staffordshire",30],
+                    ["hertfordshire","Hertfordshire",25],["berkshire","Berkshire",25],
+                  ];
+                  const match = RADII.find(([k]) => q.includes(k));
+                  if (match) return `${match[1]} · ${match[2]} mile search radius`;
+                  return "Results from across the UK";
+                })()}
               </p>
             )}
           </div>

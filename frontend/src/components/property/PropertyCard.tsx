@@ -78,12 +78,9 @@ function ImageSlideshow({ images, emoji, title }: { images: string[]; emoji: str
   const [idx, setIdx] = useState(0);
   const [failed, setFailed] = useState<Set<number>>(new Set());
   const valid = images.filter((_, i) => !failed.has(i));
-  if (valid.length === 0) return <div className="pcard-img-placeholder">{emoji}</div>;
-  const cur = idx % valid.length;
-  const handleError = () => {
-    const originalIdx = images.indexOf(valid[cur]);
-    setFailed(prev => new Set(prev).add(originalIdx));
-  };
+  if (valid.length === 0) return (
+    <div className="pcard-img-placeholder skeleton" style={{ minHeight:"inherit" }} />
+  );
   const prev = (e: React.MouseEvent) => { e.stopPropagation(); setIdx(i => (i - 1 + valid.length) % valid.length); };
   const next = (e: React.MouseEvent) => { e.stopPropagation(); setIdx(i => (i + 1) % valid.length); };
   return (
