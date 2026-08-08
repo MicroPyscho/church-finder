@@ -12,8 +12,7 @@ class ChurchesConservationTrustScraper(BaseScraper):
     source_type = "httpx"
     URLS = [
         "https://www.visitchurches.org.uk/what-we-do/conservation/conservation-projects",
-        "https://www.visitchurches.org.uk/visit-a-church/",
-    ]
+        ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
         results = []; seen = set()

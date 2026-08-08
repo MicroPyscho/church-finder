@@ -12,8 +12,7 @@ class SPABScraper(BaseScraper):
     URLS = [
         "https://www.spab.org.uk/advice/find-a-building",
         "https://www.spab.org.uk/advice/buildings-at-risk",
-        "https://www.spab.org.uk/news",
-    ]
+        ]
 
     async def scrape(self, client) -> list[ScrapedListing]:
         results = []
