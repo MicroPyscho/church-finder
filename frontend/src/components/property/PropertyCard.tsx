@@ -61,6 +61,20 @@ function toTitleCase(str: string): string {
   return str;
 }
 
+function cleanTitle(raw: string, location: string): string {
+  if (!raw) return "Church Property";
+  // If title is very long it's likely a description — extract first sentence or truncate
+  if (raw.length > 80) {
+    // Try to get first sentence
+    const firstSentence = raw.split(/[.!?]/)[0].trim();
+    if (firstSentence.length >= 10 && firstSentence.length <= 80) return toTitleCase(firstSentence);
+    // Otherwise take first 7 words
+    const words = raw.split(" ").slice(0, 7).join(" ").replace(/[,;:]$/, "");
+    return toTitleCase(words);
+  }
+  return toTitleCase(raw);
+}
+
 const SOURCE_TAG_TYPE: Record<string, string> = {
   "Clive Emson Auctions":"auction","Allsop Auctions":"auction",
   "SDL Auctions":"auction","UK Auction List":"auction","EIG Property Auctions":"auction",
@@ -74,15 +88,29 @@ const SOURCE_TAG_TYPE: Record<string, string> = {
 
 const TYPE_EMOJI: Record<string, string> = { church:"⛪", hall:"🏛", large_space:"🏢", other:"🏠" };
 
+const BAD_URLS = ["facebook","twitter","instagram","gravatar","avatar","logo","icon","badge",
+  "placeholder","animal","dog","cat","bird","butterfly","unsplash","pexels",
+  "shutterstock","gettyimages","istockphoto","data:image","maps.google","gstatic"];
+
 function ImageSlideshow({ images, emoji, title }: { images: string[]; emoji: string; title: string }) {
   const [idx, setIdx] = useState(0);
   const [failed, setFailed] = useState<Set<number>>(new Set());
+
   const valid = images.filter((_, i) => !failed.has(i));
+  const cur = idx % Math.max(valid.length, 1);
+
+  const handleError = () => {
+    const originalIdx = images.indexOf(valid[cur]);
+    setFailed(prev => new Set(prev).add(originalIdx));
+  };
+
   if (valid.length === 0) return (
     <div className="pcard-img-placeholder skeleton" style={{ minHeight:"inherit" }} />
   );
+
   const prev = (e: React.MouseEvent) => { e.stopPropagation(); setIdx(i => (i - 1 + valid.length) % valid.length); };
   const next = (e: React.MouseEvent) => { e.stopPropagation(); setIdx(i => (i + 1) % valid.length); };
+
   return (
     <>
       <img key={valid[cur]} src={valid[cur]} alt={title} onError={handleError} loading="lazy"
@@ -131,13 +159,17 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
   const emoji = TYPE_EMOJI[p.property_type || "other"] || "⛪";
   const tagType = SOURCE_TAG_TYPE[p.source] || "portal";
   const rawTitle = (p.title || "").replace(/£[\d,]+(\s*[-–]\s*£[\d,]+)?/g, "").replace(/\s{2,}/g, " ").trim();
-  const title = toTitleCase(rawTitle) || p.title;
+  const title = cleanTitle(rawTitle, p.location || "");
   const location = (p.location || "Location unknown");
   const priceRaw = (p.price_raw || p.price || "POA").replace(/([^\s])£/, "$1 £").trim();
   const isPOA = ["POA","Enquire","TBC","See article","Heritage at Risk","Filing signal","Planning stage"].some(x => priceRaw.includes(x));
   const snippet = descriptionSnippet(p.description, 120);
   const timeAgo = p.first_seen ? formatDistanceToNow(new Date(p.first_seen), { addSuffix: true }) : "";
-  const imgs: string[] = Array.isArray(p.images) && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : [];
+
+  const rawImgs: string[] = Array.isArray(p.images) && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : [];
+  const imgs: string[] = rawImgs.filter((u: string) =>
+    typeof u === "string" && u.startsWith("http") && !BAD_URLS.some(b => u.toLowerCase().includes(b))
+  );
 
   return (
     <div>
@@ -190,7 +222,11 @@ export default function PropertyCard({ property: p, matchScore, criteria = [], i
               ? <span style={{ fontSize:"0.7rem", color:"var(--green)" }}>✓ Sent</span>
               : <button className="pcard-btn" onClick={() => { if (!isLoggedIn) { openGate("enquiry"); return; } setModal(true); }}><Mail size={10}/> Contact</button>
             }
-            <button className="pcard-btn" onClick={e => { e.stopPropagation(); window.open(p.source_url || p.url, "_blank", "noopener,noreferrer"); }}>
+            <button className="pcard-btn" onClick={e => {
+              e.stopPropagation();
+              (window as any).umami?.track("source-click", { source: p.source });
+              window.open(p.source_url || p.url, "_blank", "noopener,noreferrer");
+            }}>
               <ExternalLink size={10}/> Source
             </button>
           </div>

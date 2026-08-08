@@ -121,6 +121,8 @@ export default function SearchPage() {
     setEdgeCase(null); setShowFollowUp(false); setShowDropdown(false); setSuggestion("");
     saveRecentSearch(trimmed, user?.id?.toString());
     setRecentSearches(loadRecentSearches(user?.id?.toString()));
+    // Track search event
+    (window as any).umami?.track("search", { query: trimmed });
     mut.mutate(trimmed);
   }
 
@@ -198,7 +200,7 @@ export default function SearchPage() {
         </span>
       </div>
 
-      {/* ── Hero title — two lines, left-aligned text stacked ── */}
+      {/* ── Hero title ── */}
       <h1 style={{
         fontFamily:"'Gabarito'", fontWeight:900,
         fontSize:"clamp(40px, 6.6vw, 76px)",
@@ -208,19 +210,15 @@ export default function SearchPage() {
       }}>
         <span style={{ display:"block" }}>
           <em style={{
-            fontFamily:"'League Script', cursive",
-            fontStyle:"normal", fontWeight:400,
-            WebkitTextStroke:"0.7px #6b70c2",
-            fontSize:"0.52em", color:"#6b70c2",
+            fontFamily:"'League Script', cursive", fontStyle:"normal", fontWeight:400,
+            WebkitTextStroke:"0.7px #6b70c2", fontSize:"0.52em", color:"#6b70c2",
             verticalAlign:"0.1em", marginRight:"0.16em",
           }}>for</em>churches, chapels
         </span>
         <span style={{ display:"block" }}>
           <em style={{
-            fontFamily:"'League Script', cursive",
-            fontStyle:"normal", fontWeight:400,
-            WebkitTextStroke:"0.7px #6b70c2",
-            fontSize:"0.6em", color:"#6b70c2",
+            fontFamily:"'League Script', cursive", fontStyle:"normal", fontWeight:400,
+            WebkitTextStroke:"0.7px #6b70c2", fontSize:"0.6em", color:"#6b70c2",
             marginRight:"0.12em", verticalAlign:"0.02em",
           }}>and</em>places of worship
         </span>
