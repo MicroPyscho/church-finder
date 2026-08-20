@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
-    ENV: Literal["dev", "staging", "prod"] = "dev"
+    ENV: Literal["dev", "staging", "prod", "production"] = "dev"
     APP_VERSION: str = "0.0.0"
     SECRET_KEY: str = "change-me-in-production"
 
