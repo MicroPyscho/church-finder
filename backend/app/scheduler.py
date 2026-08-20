@@ -87,6 +87,7 @@ def start_scheduler(crawl_hours: int = 3):
         id="crawl_all_sources",
         name="Scrape all listing sources",
         replace_existing=True,
+        next_run_time=datetime.now(),
     )
     scheduler.add_job(
         _enrich_images,

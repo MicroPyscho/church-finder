@@ -33,6 +33,7 @@ services:
       NOTIFY_METHOD: none
       REQUEST_DELAY_SECONDS: "1"
       SECRET_KEY: dev-secret-not-for-prod-change-me
+      CRAWL4AI_BASE_DIRECTORY: /tmp/crawl4ai
     ports:
       - "8000:8000"
     volumes:
