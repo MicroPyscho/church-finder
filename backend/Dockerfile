@@ -22,8 +22,6 @@ WORKDIR /app
 COPY --from=builder /usr/local /usr/local
 COPY . .
 
-COPY scripts/ /app/scripts/
-RUN chmod +x /app/scripts/*.sh
 
 RUN chown -R appuser:appuser /app
 USER appuser
