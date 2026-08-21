@@ -13,7 +13,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from app.scheduler import start_scheduler, stop_scheduler
 from app.routers import listings, deployments, health, properties, favourites, enquiry, auth, seo
 from app.routers import search
 
@@ -30,10 +29,9 @@ async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    start_scheduler(crawl_hours=settings.CRAWL_INTERVAL_HOURS)
     yield
     # Shutdown
-    stop_scheduler()
+    await engine.dispose()
 
 
 app = FastAPI(

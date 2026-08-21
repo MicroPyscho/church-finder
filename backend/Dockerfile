@@ -22,13 +22,12 @@ WORKDIR /app
 COPY --from=builder /usr/local /usr/local
 COPY . .
 
-
 RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD python -c "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"
+  CMD python -c "import os, httpx; httpx.get(f'http://localhost:{os.environ.get(\"PORT\", 8000)}/health').raise_for_status()"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]# force rebuild Thu Aug 20 10:50:23 BST 2026
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
