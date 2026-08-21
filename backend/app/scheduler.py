@@ -10,6 +10,7 @@ import asyncio
 import logging
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -88,7 +89,7 @@ def start_scheduler(crawl_hours: int = 3):
         id="crawl_all_sources",
         name="Scrape all listing sources",
         replace_existing=True,
-        next_run_time=datetime.now(),
+       next_run_time=datetime.now(ZoneInfo("Europe/London")),
     )
     scheduler.add_job(
         _enrich_images,
