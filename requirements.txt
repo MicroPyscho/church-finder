@@ -15,7 +15,7 @@ alembic==1.14.0
 httpx==0.28.1
 
 # Browser scraping (bot-protected sources — Rightmove, Zoopla)
-playwright==1.49.0
+playwright==1.49.1
 
 # Caching
 redis==5.2.1

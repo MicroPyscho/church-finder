@@ -1,4 +1,3 @@
-
 # Background jobs
 # Code quality
 # Database
