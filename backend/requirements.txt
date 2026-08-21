@@ -18,6 +18,7 @@ httpx==0.27.0
 lxml==5.2.2
 mypy==1.10.0
 passlib[bcrypt]==1.7.4
+playwright==1.49.1
 psycopg2-binary==2.9.9
 pydantic-settings==2.3.0
 pydantic==2.7.1
