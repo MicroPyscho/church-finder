@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     NOTIFY_EMAIL_TO: str = ""
     WEBHOOK_URL: str = ""
 
-    CRAWL_INTERVAL_HOURS: int = 3
+    CRAWL_INTERVAL_HOURS: int = 24
     REQUEST_DELAY_SECONDS: int = 3
     KEYWORDS: list[str] = [
         "church", "chapel", "former church",
