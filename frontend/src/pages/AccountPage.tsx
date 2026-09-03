@@ -96,7 +96,7 @@ const SIMPLE: Record<string, { icon: string; title: string; body: string; cta: s
 const s: React.CSSProperties = {};
 
 export default function AccountPage() {
-  useSEO({ title: "Account — Nave" });
+ useSEO({ title: "Account — Ulouka", description: "Manage your Ulouka account, saved searches, and preferences." });
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [active, setActive] = useState<Section>("profile");

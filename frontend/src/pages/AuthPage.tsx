@@ -197,7 +197,6 @@ export default function AuthPage() {
       borderBottom: active ? "2px solid #1a1a1a" : "2px solid transparent",
       cursor: "pointer", transition: "all .15s",
       background: "none", border: "none",
-      borderBottom: active ? "2px solid #1a1a1a" : "2px solid transparent",
     } as React.CSSProperties),
     label: {
       display: "block", fontSize: "0.72rem",
