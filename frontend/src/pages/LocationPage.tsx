@@ -35,7 +35,7 @@ const totalProps = REGIONS.reduce((a, r) => a + r.count, 0);
 
 export default function LocationPage() {
   useSEO({
-    title: "Churches for Sale by Region — Nave",
+    title: "Churches for Sale by Region — Ulouka",
     description: "Browse churches, chapels and places of worship for sale across every region of the UK.",
   });
 

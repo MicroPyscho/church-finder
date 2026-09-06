@@ -40,7 +40,7 @@ function clearRecentSearches(userId?: string) {
 
 export default function SearchPage() {
   useSEO({
-    title: "Nave",
+    title: "Ulouka",
     description: "Search 100+ churches, chapels and places of worship for sale across the UK. Find your perfect ecclesiastical property.",
   });
   const navigate = useNavigate();

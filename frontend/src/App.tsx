@@ -40,8 +40,8 @@ function Nav({ dark, setDark }: { dark: boolean; setDark: (d: boolean) => void }
           <button className="nav-logo" onClick={() => nav("/")}
             style={{ padding:0, background:"none", border:"none", cursor:"pointer" }}>
             <img
-              src={dark ? "/nave-logo-white.svg" : "/nave-logo-black.svg"}
-              alt="Nave"
+              src={dark ? "/ulouka-logo-white.svg" : "/ulouka-logo-black.svg"}
+              alt="Ulouka"
               style={{ height:"clamp(18px,3vw,24px)", width:"auto", maxWidth:"clamp(80px,12vw,110px)", display:"block" }}
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
@@ -157,13 +157,13 @@ function Footer({ dark }: { dark: boolean }) {
     <footer style={{ borderTop:"1px solid var(--line)", background:"var(--bg)" }}>
       <div style={{ maxWidth:1040, margin:"0 auto", padding:"30px 22px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap" }}>
         <img
-          src={dark ? "/nave-logo-white.svg" : "/nave-logo-black.svg"}
-          alt="Nave"
+          src={dark ? "/ulouka-logo-white.svg" : "/ulouka-logo-black.svg"}
+          alt="Ulouka"
           style={{ height:15, width:"auto", display:"block", opacity:0.5 }}
           onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
         <p style={{ font:"400 12px 'Space Grotesk'", color:"var(--ink4)", margin:0, textAlign:"center" }}>
-          © 2026 Nave · Church &amp; Gathering Space Intelligence · UK hosted · GDPR compliant
+          © 2026 Ulouka · Church &amp; Gathering Space Intelligence · UK hosted · GDPR compliant
         </p>
         <div style={{ display:"flex", gap:16, alignItems:"center" }}>
           <NavLink to="/churches-for-sale" style={{ font:"400 12px 'Space Grotesk'", color:"var(--ink3)", textDecoration:"none" }}>Regions</NavLink>

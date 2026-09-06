@@ -119,8 +119,8 @@ export default function PropertyPage() {
   });
 
   useSEO({
-    title: prop ? `${prop.title} — Nave` : "Property — Nave",
-    description: prop?.description?.slice(0, 160) ?? "Church and chapel property on Nave.",
+    title: prop ? `${prop.title} — Ulouka` : "Property — Ulouka",
+    description: prop?.description?.slice(0, 160) ?? "Church and chapel property on Ulouka.",
   });
 
   const favMut = useMutation({

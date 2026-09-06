@@ -27,12 +27,12 @@ const TITLES: Record<Section, [string, string]> = {
   faq:      ["FAQ",               "Answers to the questions we hear most."],
   support:  ["Support",           "We aim to respond within 24 hours."],
   privacy:  ["Privacy policy",    "How we handle your data."],
-  terms:    ["Terms & conditions","The rules for using Nave."],
-  landlord: ["Landlord portal",   "List your space directly on Nave."],
+  terms:    ["Terms & conditions","The rules for using Ulouka."],
+  landlord: ["Landlord portal",   "List your space directly on Ulouka."],
 };
 
 const FAQ = [
-  { q: "How does Nave source its listings?", a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals and the Charities Commission. Data refreshes every 3 hours." },
+  { q: "How does Ulouka source its listings?", a: "We aggregate from 30+ sources including Rightmove, Zoopla, church bodies, auction houses, planning portals and the Charities Commission." },
   { q: "What does the match score mean?", a: "The score reflects suitability for your stated purpose — based on listing details, planning status, location and comparable transactions." },
   { q: "How do pre-market signals work?", a: "We monitor Charities Commission filings, Companies House dissolutions and planning applications. These can give 6–18 months advance notice before a property lists." },
   { q: "Is my data safe?", a: "Yes. AES-256 encryption, UK data centres, ICO registered. Export or delete your data at any time from your profile." },
@@ -45,14 +45,14 @@ const PRIVACY = [
   { h: "How we use it", b: "To provide property search, alerts and match analysis. We do not sell your data or share it with advertisers." },
   { h: "Lawful basis", b: "Contract (your account), legitimate interest (improving the service) and consent (optional analytics). You can withdraw consent at any time." },
   { h: "Data retention", b: "Account data is kept while your account is active. Search history is retained for 90 days. Audit logs are kept for 7 years." },
-  { h: "Your rights", b: "Access, rectification, erasure, portability and objection under UK GDPR. Contact privacy@nave.co.uk." },
+  { h: "Your rights", b: "Access, rectification, erasure, portability and objection under UK GDPR. Contact privacy@ulouka.com." },
 ];
 
 const TERMS = [
-  { h: "Service description", b: "Nave aggregates publicly available property listings and provides match analysis. We are not an estate agent and do not act on your behalf in any transaction." },
+  { h: "Service description", b: "Ulouka aggregates publicly available property listings and provides match analysis. We are not an estate agent and do not act on your behalf in any transaction." },
   { h: "Analysis disclaimer", b: "Match scores are indicative only. They do not constitute professional property, legal or financial advice. Always instruct qualified professionals before purchasing." },
   { h: "Data accuracy", b: "Listing data is sourced from third parties. We cannot guarantee accuracy or availability. Always verify directly with the source." },
-  { h: "Acceptable use", b: "You may not scrape, automate or resell data from Nave. The service is for personal property search only." },
+  { h: "Acceptable use", b: "You may not scrape, automate or resell data from Ulouka. The service is for personal property search only." },
   { h: "Governing law", b: "These terms are governed by English law. Disputes are subject to the exclusive jurisdiction of English courts." },
 ];
 
@@ -64,7 +64,7 @@ const row = (label: string, value?: string, action?: string, danger?: boolean) =
 });
 
 const PROFILE_CARDS = [
-  { rows: [row("Full name","Alex Mercer","Edit"), row("Email","alex@nave.co.uk","Change"), row("Phone","Not set","Add"), row("Password","••••••••••••","Change")] },
+  { rows: [row("Full name","Alex Mercer","Edit"), row("Email","alex@ulouka.co.uk","Change"), row("Phone","Not set","Add"), row("Password","••••••••••••","Change")] },
   { rows: [row("Search intent","Conversion to a home","Edit"), row("Max budget","£250,000","Edit"), row("Preferred counties","Yorkshire, Lancashire","Edit")] },
   { rows: [row("Export my data",undefined,"Download JSON"), row("Delete account",undefined,"Delete",true)] },
 ];
@@ -82,15 +82,15 @@ const SAVED = [
 ];
 
 const SUPPORT = [
-  { label: "Email support",   value: "support@nave.co.uk",    action: "Open email" },
+  { label: "Email support",   value: "support@ulouka.co.uk",    action: "Open email" },
   { label: "Report a bug",    value: "Something not working?", action: "Report" },
   { label: "Feature request", value: "Suggest something new",  action: "Suggest" },
 ];
 
 const SIMPLE: Record<string, { icon: string; title: string; body: string; cta: string; href: string }> = {
-  viewings: { icon: "▣", title: "No viewings booked yet",  body: "When you request viewings through Nave, they'll appear here.", cta: "Browse properties", href: "/" },
+  viewings: { icon: "▣", title: "No viewings booked yet",  body: "When you request viewings through Ulouka, they'll appear here.", cta: "Browse properties", href: "/" },
   alerts:   { icon: "◔", title: "2 active alerts",          body: "Manage the alerts that notify you when matching properties appear.", cta: "Go to alerts", href: "/alerts" },
-  landlord: { icon: "⌂", title: "Coming soon",              body: "List your church or gathering space directly on Nave. Reach verified buyers and track interest in real time.", cta: "Join the waitlist", href: "/account" },
+  landlord: { icon: "⌂", title: "Coming soon",              body: "List your church or gathering space directly on Ulouka. Reach verified buyers and track interest in real time.", cta: "Join the waitlist", href: "/account" },
 };
 
 const s: React.CSSProperties = {};

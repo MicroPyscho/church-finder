@@ -13,7 +13,7 @@ export default function EdgeCase({ data, onSuggestionClick }:Props) {
       <span className="edge-case__icon">⛪</span>
       <h2 className="edge-case__title">We specialise in churches and gathering spaces</h2>
       <p className="edge-case__body">
-        {data.message ?? "Nave covers churches, chapels, halls, and large gathering spaces across the UK. Expanding to more property types soon."}
+        {data.message ?? "Ulouka covers churches, chapels, halls, and large gathering spaces across the UK. Expanding to more property types soon."}
       </p>
       <p style={{fontSize:"0.75rem",color:"var(--mid)",marginBottom:10,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase"}}>Try one of these</p>
       <div className="edge-case__suggestions">
