@@ -42,7 +42,7 @@ function Nav({ dark, setDark }: { dark: boolean; setDark: (d: boolean) => void }
             <img
               src={dark ? "/ulouka-logo-white.svg" : "/ulouka-logo-black.svg"}
               alt="Ulouka"
-              style={{ height:"clamp(18px,3vw,24px)", width:"auto", maxWidth:"clamp(80px,12vw,110px)", display:"block" }}
+              style={{ height:"clamp(24px,4vw,32px)", width:"auto", maxWidth:"clamp(110px,16vw,150px)", display:"block" }}
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </button>
