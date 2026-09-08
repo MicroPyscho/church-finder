@@ -135,7 +135,7 @@ export default function PropertyPage() {
   async function doStream() {
     setStream(""); setStreaming(true);
     try {
-      const res = await fetch(`/api/search/stream-analysis/${id}`);
+       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/search/stream-analysis/${id}`);
       if (!res.body) return;
       const reader = res.body.getReader();
       const dec    = new TextDecoder();
